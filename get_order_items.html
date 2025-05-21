@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Items Explorer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1, h2, h3 {
+      color: #333;
+    }
+    .container {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .item-details {
+      white-space: pre-line;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+    label, input, select, button {
+      display: block;
+      margin-bottom: 10px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .menu-items {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .menu-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      background-color: white;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .menu-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .menu-card h3 {
+      margin-top: 0;
+      color: #2196F3;
+    }
+    .price {
+      font-weight: bold;
+      color: #4CAF50;
+    }
+    .customization {
+      margin: 15px 0;
+      padding: 10px;
+      background-color: #f1f1f1;
+      border-radius: 5px;
+    }
+    .order-summary {
+      background-color: #e9f7ef;
+      border-left: 4px solid #4CAF50;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    .phone-input {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .phone-input input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .phone-input button {
+      margin-bottom: 0;
+    }
+    .restaurant-type {
+      display: inline-block;
+      margin-left: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .indian {
+      background-color: #ffebee;
+      color: #d32f2f;
+    }
+    .italian {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+    }
+    .chinese {
+      background-color: #e3f2fd;
+      color: #1565c0;
+    }
+    .restaurant-info {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .inline-btn {
+      display: inline-block;
+      margin-right: 10px;
+    }
+    .restaurant-selector {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .restaurant-selector button {
+      display: inline-block;
+      margin: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Restaurant Menu Explorer</h1>
+    
+    <div class="restaurant-selector">
+      <h2>Select a Restaurant by Type</h2>
+      <button id="indianRestaurantBtn" class="inline-btn">Indian Restaurant</button>
+      <button id="italianRestaurantBtn" class="inline-btn">Italian Restaurant</button>
+      <button id="chineseRestaurantBtn" class="inline-btn">Chinese Restaurant</button>
+    </div>
+    
+    <h2>Or Enter Phone Number</h2>
+    <p>Different phone numbers will show different restaurant menus.</p>
+    <div class="phone-input">
+      <input type="tel" id="phoneNumberInput" placeholder="Enter phone number (e.g., +19202808073)" value="+19202808073">
+      <button id="phoneNumberBtn">Load Restaurant</button>
+    </div>
+    <p class="hint">Hint: Last digit determines restaurant type - 0-3: Indian, 4-6: Italian, 7-9: Chinese</p>
+  </div>
+  
+  <div class="restaurant-info">
+    <h1 id="restaurantName">Loading...</h1>
+    <span id="restaurantType" class="restaurant-type"></span>
+  </div>
+  <p id="restaurantAddress">Loading...</p>
+  <p id="restaurantPhone">Loading...</p>
+  
+  <div class="container">
+    <h2>Menu Categories</h2>
+    <div id="categoryButtons"></div>
+    
+    <div id="menuItems" class="menu-items"></div>
+  </div>
+  
+  <div class="container">
+    <h2>Item Details</h2>
+    <div id="itemDetails" class="item-details">
+      Select an item from the menu to view details
+    </div>
+    
+    <div id="customizationsContainer" style="display: none;">
+      <h3>Customize Your Order</h3>
+      <div id="customizationOptions"></div>
+      <button id="addToOrderBtn">Add to Order</button>
+    </div>
+  </div>
+  
+  <div class="container">
+    <h2>Your Order</h2>
+    <div id="orderItems"></div>
+    <div id="orderTotal" class="order-summary" style="display: none;">
+      <h3>Order Total: <span id="totalAmount">$0.00</span></h3>
+      <button id="placeOrderBtn">Place Order</button>
+    </div>
+  </div>
+
+  <script src="get_order_items.js"></script>
+  <script>
+    // Global state
+    let restaurantData = null;
+    let currentItemDetails = null;
+    let orderItems = [];
+    
+    // DOM elements
+    const phoneNumberInput = document.getElementById('phoneNumberInput');
+    const phoneNumberBtn = document.getElementById('phoneNumberBtn');
+    const indianRestaurantBtn = document.getElementById('indianRestaurantBtn');
+    const italianRestaurantBtn = document.getElementById('italianRestaurantBtn');
+    const chineseRestaurantBtn = document.getElementById('chineseRestaurantBtn');
+    const restaurantNameElement = document.getElementById('restaurantName');
+    const restaurantAddressElement = document.getElementById('restaurantAddress');
+    const restaurantPhoneElement = document.getElementById('restaurantPhone');
+    const restaurantTypeElement = document.getElementById('restaurantType');
+    const categoryButtonsElement = document.getElementById('categoryButtons');
+    const menuItemsElement = document.getElementById('menuItems');
+    const itemDetailsElement = document.getElementById('itemDetails');
+    const customizationsContainer = document.getElementById('customizationsContainer');
+    const customizationOptions = document.getElementById('customizationOptions');
+    const addToOrderBtn = document.getElementById('addToOrderBtn');
+    const orderItemsElement = document.getElementById('orderItems');
+    const orderTotalElement = document.getElementById('orderTotal');
+    const totalAmountElement = document.getElementById('totalAmount');
+    const placeOrderBtn = document.getElementById('placeOrderBtn');
+    
+    // Initialize the application with a specific restaurant
+    function initRestaurant(phoneNumber) {
+      // Clear previous data
+      categoryButtonsElement.innerHTML = '';
+      menuItemsElement.innerHTML = '';
+      itemDetailsElement.textContent = 'Select an item from the menu to view details';
+      customizationsContainer.style.display = 'none';
+      orderItems = [];
+      updateOrderDisplay();
+      
+      // Get restaurant data
+      restaurantData = getRestaurantData(phoneNumber);
+      
+      // Determine restaurant type
+      let restaurantType = 'indian';
+      if (restaurantData.restaurant_name === 'Bella Italia') {
+        restaurantType = 'italian';
+      } else if (restaurantData.restaurant_name === 'Golden Dragon') {
+        restaurantType = 'chinese';
+      }
+      
+      // Update restaurant info
+      restaurantNameElement.textContent = restaurantData.restaurant_name;
+      restaurantAddressElement.textContent = restaurantData.restaurant_address;
+      restaurantPhoneElement.textContent = `Phone: ${restaurantData.phone_number}`;
+      restaurantTypeElement.textContent = restaurantType.charAt(0).toUpperCase() + restaurantType.slice(1);
+      restaurantTypeElement.className = `restaurant-type ${restaurantType}`;
+      
+      // Create category buttons
+      restaurantData.category_list.forEach(category => {
+        const button = document.createElement('button');
+        button.textContent = category;
+        button.style.display = 'inline-block';
+        button.style.marginRight = '10px';
+        button.addEventListener('click', () => filterByCategory(category));
+        categoryButtonsElement.appendChild(button);
+      });
+      
+      // Display all menu items initially
+      displayAllMenuItems();
+    }
+    
+    // Display all menu items
+    function displayAllMenuItems() {
+      menuItemsElement.innerHTML = '';
+      
+      restaurantData.item_list.forEach(item => {
+        const itemCard = createMenuItemCard(item);
+        menuItemsElement.appendChild(itemCard);
+      });
+    }
+    
+    // Filter menu items by category (this is a placeholder since our data doesn't have category per item)
+    function filterByCategory(category) {
+      // In a real application, we would filter items by category
+      // For demo purposes, we're just showing all items
+      displayAllMenuItems();
+    }
+    
+    // Create a card for a menu item
+    function createMenuItemCard(item) {
+      const card = document.createElement('div');
+      card.className = 'menu-card';
+      
+      const name = document.createElement('h3');
+      name.textContent = item[0];
+      
+      const price = document.createElement('p');
+      price.className = 'price';
+      price.textContent = `$${item[1].toFixed(2)}`;
+      
+      card.appendChild(name);
+      card.appendChild(price);
+      
+      // Add click handler
+      card.addEventListener('click', () => displayItemDetails(item[0]));
+      
+      return card;
+    }
+    
+    // Display details for a specific item
+    function displayItemDetails(itemName) {
+      currentItemDetails = findItemDetails(restaurantData, itemName);
+      
+      if (!currentItemDetails) {
+        itemDetailsElement.textContent = "Item not found.";
+        customizationsContainer.style.display = 'none';
+        return;
+      }
+      
+      // Display basic item details
+      itemDetailsElement.textContent = 
+        `${currentItemDetails.name}\nBase Price: $${currentItemDetails.base_price.toFixed(2)}`;
+      
+      // Setup customization options
+      if (currentItemDetails.customizations && currentItemDetails.customizations.length > 0) {
+        customizationOptions.innerHTML = '';
+        
+        currentItemDetails.customizations.forEach(customization => {
+          const customDiv = document.createElement('div');
+          customDiv.className = 'customization';
+          
+          const customLabel = document.createElement('label');
+          customLabel.textContent = `${customization.name}${customization.required ? ' (Required)' : ''}:`;
+          
+          const select = document.createElement('select');
+          select.id = `custom-${customization.name.replace(/\s+/g, '-').toLowerCase()}`;
+          select.name = customization.name;
+          
+          // Add default empty option if not required
+          if (!customization.required) {
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.textContent = "-- Select an option --";
+            select.appendChild(defaultOption);
+          }
+          
+          // Add options
+          customization.options.forEach(option => {
+            const optElement = document.createElement('option');
+            optElement.value = option[0];
+            
+            if (option.length > 1) {
+              optElement.textContent = `${option[0]} (+$${option[1].toFixed(2)})`;
+            } else {
+              optElement.textContent = option[0];
+            }
+            
+            select.appendChild(optElement);
+          });
+          
+          customDiv.appendChild(customLabel);
+          customDiv.appendChild(select);
+          customizationOptions.appendChild(customDiv);
+        });
+        
+        customizationsContainer.style.display = 'block';
+      } else {
+        customizationsContainer.style.display = 'none';
+      }
+    }
+    
+    // Add current item to order
+    function addToOrder() {
+      if (!currentItemDetails) return;
+      
+      const selectedOptions = {};
+      
+      // Get all selected options
+      currentItemDetails.customizations.forEach(customization => {
+        const selectId = `custom-${customization.name.replace(/\s+/g, '-').toLowerCase()}`;
+        const selectElement = document.getElementById(selectId);
+        const selectedValue = selectElement.value;
+        
+        if (selectedValue) {
+          selectedOptions[customization.name] = selectedValue;
+        }
+      });
+      
+      // Check if all required customizations are selected
+      const missingRequired = currentItemDetails.customizations
+        .filter(c => c.required)
+        .some(c => !(c.name in selectedOptions));
+      
+      if (missingRequired) {
+        alert('Please select all required customization options');
+        return;
+      }
+      
+      // Calculate price
+      const price = calculateItemPrice(currentItemDetails, selectedOptions);
+      
+      // Add to order
+      const orderItem = {
+        item: currentItemDetails,
+        options: selectedOptions,
+        price: price
+      };
+      
+      orderItems.push(orderItem);
+      
+      // Update order display
+      updateOrderDisplay();
+    }
+    
+    // Update the order display
+    function updateOrderDisplay() {
+      orderItemsElement.innerHTML = '';
+      
+      if (orderItems.length === 0) {
+        orderItemsElement.textContent = 'Your order is empty.';
+        orderTotalElement.style.display = 'none';
+        return;
+      }
+      
+      // Create order item elements
+      orderItems.forEach((orderItem, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'item-details';
+        
+        // Create item summary
+        let optionsText = '';
+        for (const [name, value] of Object.entries(orderItem.options)) {
+          optionsText += `\n- ${name}: ${value}`;
+        }
+        
+        itemDiv.textContent = `${orderItem.item.name}${optionsText}\nPrice: $${orderItem.price.toFixed(2)}`;
+        
+        // Add remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Remove';
+        removeBtn.style.backgroundColor = '#f44336';
+        removeBtn.style.marginTop = '10px';
+        removeBtn.addEventListener('click', () => removeOrderItem(index));
+        
+        itemDiv.appendChild(removeBtn);
+        orderItemsElement.appendChild(itemDiv);
+      });
+      
+      // Calculate and display total
+      const total = orderItems.reduce((sum, item) => sum + item.price, 0);
+      totalAmountElement.textContent = `$${total.toFixed(2)}`;
+      orderTotalElement.style.display = 'block';
+    }
+    
+    // Remove an item from the order
+    function removeOrderItem(index) {
+      orderItems.splice(index, 1);
+      updateOrderDisplay();
+    }
+    
+    // Place the order
+    function placeOrder() {
+      if (orderItems.length === 0) {
+        alert('Your order is empty!');
+        return;
+      }
+      
+      alert('Your order has been placed successfully!');
+      orderItems = [];
+      updateOrderDisplay();
+    }
+    
+    // Generate phone number for different restaurant types
+    function generatePhoneNumber(type) {
+      const prefix = '+1920';
+      let suffix = '';
+      
+      switch (type) {
+        case 'indian':
+          suffix = '2808073'; // Ending with 3 (Indian)
+          break;
+        case 'italian':
+          suffix = '4567894'; // Ending with 4 (Italian)
+          break;
+        case 'chinese':
+          suffix = '7891237'; // Ending with 7 (Chinese)
+          break;
+      }
+      
+      return prefix + suffix;
+    }
+    
+    // Add event listeners
+    phoneNumberBtn.addEventListener('click', () => {
+      const phoneNumber = phoneNumberInput.value.trim();
+      if (phoneNumber) {
+        initRestaurant(phoneNumber);
+      } else {
+        alert('Please enter a valid phone number');
+      }
+    });
+    
+    indianRestaurantBtn.addEventListener('click', () => {
+      const phoneNumber = generatePhoneNumber('indian');
+      phoneNumberInput.value = phoneNumber;
+      initRestaurant(phoneNumber);
+    });
+    
+    italianRestaurantBtn.addEventListener('click', () => {
+      const phoneNumber = generatePhoneNumber('italian');
+      phoneNumberInput.value = phoneNumber;
+      initRestaurant(phoneNumber);
+    });
+    
+    chineseRestaurantBtn.addEventListener('click', () => {
+      const phoneNumber = generatePhoneNumber('chinese');
+      phoneNumberInput.value = phoneNumber;
+      initRestaurant(phoneNumber);
+    });
+    
+    addToOrderBtn.addEventListener('click', addToOrder);
+    placeOrderBtn.addEventListener('click', placeOrder);
+    
+    // Initialize the app with default phone number when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      initRestaurant(phoneNumberInput.value.trim());
+    });
+  </script>
+</body>
+</html> 

@@ -1,0 +1,46 @@
+name: testing-agent-frontend
+services:
+- name: web
+  github:
+    branch: restaurant-menu-upload
+    deploy_on_push: true
+  http_port: 5173
+  build_command: npm install
+  run_command: npm run dev -- --host 0.0.0.0
+  routes:
+  - path: /
+  envs:
+  - key: PORT
+    scope: RUN_TIME
+    value: "5173"
+  - key: NODE_ENV
+    scope: RUN_TIME
+    value: "development"
+  health_check:
+    http_path: /health.txt
+    port: 5173
+    initial_delay_seconds: 20
+    period_seconds: 10
+
+
+# name: testing-agent-frontend
+# services:
+#   - name: web
+#     github:
+#       branch: restaurant-menu-upload
+#       deploy_on_push: true
+#     run_command: npx serve -s dist -l 8080          # <-- static file server
+#     build_command: |
+#       npm ci
+#       npm run build
+#     http_port: 8080
+#     routes:
+#       - path: /
+#     envs:
+#       - key: NODE_ENV
+#         value: "production"
+#     health_check:
+#       http_path: /
+#       port: 8080
+#       initial_delay_seconds: 20
+#       period_seconds: 10

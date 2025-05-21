@@ -1,0 +1,11 @@
+To fix the missing Testing Agent logo:
+
+1. Create or find an appropriate logo for your Testing Agent application
+   - You can create a simple placeholder at: https://via.placeholder.com/100x100/4285F4/FFFFFF?text=TA
+   - Or design your own logo using a tool like Figma, Canva, or Adobe Illustrator
+
+2. Save it in this directory as "logo.png"
+
+3. Make sure the image is appropriately sized (100px-150px width recommended)
+
+This logo will be displayed at the top of the login page for your application. 

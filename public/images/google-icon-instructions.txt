@@ -1,0 +1,11 @@
+To fix the missing Google icon:
+
+1. Download the Google "G" logo:
+   - You can find it at: https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg
+   - Or search for "Google G Logo" on Google Images
+
+2. Save it in this directory as "google-icon.png"
+
+3. Make sure the image is appropriately sized (20px-30px width)
+
+This icon will be displayed in the "Sign in with Google" button on your login page. 

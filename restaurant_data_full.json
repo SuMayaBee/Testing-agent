@@ -1,0 +1,2436 @@
+{
+    "restaurant_name": "Punjaabi Indian Cuisine",
+    "restaurant_id": "CSaMaEJvnn0AegcybXxr",
+    "restaurant_address": "7235 Bellshire Gate, Mississauga, Ontario - L5N 7X1",
+    "category_list": [
+        "",
+        "Offers",
+        "Store Special (Buy 1 Get 1)",
+        "Value Meals",
+        "Rice Bowls",
+        "Chat Station & Snacks",
+        "Appetizers Vegetarian",
+        "Appetizers Non Vegetarian",
+        "Curries Veg",
+        "Curries Non Veg",
+        "Soups",
+        "Hakka Chinese",
+        "Momos",
+        "Wraps",
+        "Rice",
+        "Breads",
+        "Mocktail Magic",
+        "Beverages",
+        "Deserts",
+        "Extras",
+        "Party Trays for 10 - 12 people"
+    ],
+    "item_list": [
+        [
+            "Amritsari Kulcha Chana",
+            16.94
+        ],
+        [
+            "Amritsari Mix Paratha Combo",
+            13.55
+        ],
+        [
+            "Soya Malai Chaap-Must Try",
+            19.2,
+            "Extra Malai"
+        ],
+        [
+            "Chicken Biryani",
+            19.2,
+            "Spice Level"
+        ],
+        [
+            "Tandoori Momo",
+            18.07,
+            "Veg or Non Veg"
+        ],
+        [
+            "Manchurian (Veg)",
+            20.33,
+            "Gravy Type"
+        ],
+        [
+            "Veg Samosa with Chole",
+            14.68
+        ],
+        [
+            "Kulfi Rabri Falooda",
+            15.81
+        ],
+        [
+            "Chinese Fried Rice",
+            19.2,
+            "Veg or Non Veg"
+        ],
+        [
+            "Fried Momo's",
+            16.94,
+            "Veg or Non Veg"
+        ],
+        [
+            "Royal Shake",
+            11.29,
+            "Shake Flavor"
+        ],
+        [
+            "Chana Bhatura",
+            16.94
+        ],
+        [
+            "Royal Flooda with Rabri",
+            12.42
+        ],
+        [
+            "Chicken Tariwala",
+            21.46,
+            "Spice Level"
+        ],
+        [
+            "Tandoori Soya Chaap",
+            19.2
+        ],
+        [
+            "Veg Curry Rice Bowl (Buy 1 Get 1)",
+            22.59
+        ],
+        [
+            "Non Veg Curry Rice Bowl (Buy 1 Get 1)",
+            24.85
+        ],
+        [
+            "Veg Thali ( 3 Veg, Rice, Raita, Bread, and Dessert)",
+            15.81
+        ],
+        [
+            "Non Veg Thali ( 2 Meats, One Veg, Rice, Raita, Bread, and Dessert)",
+            18.07
+        ],
+        [
+            "Shahi Paneer Combo",
+            16.94
+        ],
+        [
+            "Dal Makhni Combo",
+            16.94
+        ],
+        [
+            "Veg Chinese combo",
+            16.94
+        ],
+        [
+            "Kadhai Paneer Combo",
+            16.94
+        ],
+        [
+            "Palak Paneer Combo",
+            18.07
+        ],
+        [
+            "Chana puri",
+            13.55
+        ],
+        [
+            "Chicken Curry Combo",
+            16.94
+        ],
+        [
+            "Non-veg Chinese combo",
+            16.94
+        ],
+        [
+            "Chicken kheema naan with curry",
+            15.81
+        ],
+        [
+            "Butter Chicken Combo",
+            18.07
+        ],
+        [
+            "Dal Tadka Combo",
+            16.94
+        ],
+        [
+            "Aloo Paratha Combo",
+            9.03
+        ],
+        [
+            "Gobi Paratha Combo",
+            9.03
+        ],
+        [
+            "Onion Paratha Combo",
+            9.03
+        ],
+        [
+            "Paneer Paratha Combo",
+            10.16
+        ],
+        [
+            "Aloo Kulcha Chana",
+            13.55
+        ],
+        [
+            "Paneer Kulcha Chana",
+            14.68
+        ],
+        [
+            "Rajma Rice",
+            18.07
+        ],
+        [
+            "Kadi Pakoda Rice Bowl",
+            18.07
+        ],
+        [
+            "Chilly Chicken Rice bowl",
+            14.68
+        ],
+        [
+            "Butter Chicken Rice Bowl",
+            14.68
+        ],
+        [
+            "Dal makhani rice bowl",
+            14.68
+        ],
+        [
+            "Dal Tadka and rice",
+            13.55
+        ],
+        [
+            "Chicken Curry RiceBowl",
+            14.68
+        ],
+        [
+            "Goat Curry Rice bowl",
+            15.81
+        ],
+        [
+            "Shahi paneer rice bowl",
+            14.68
+        ],
+        [
+            "Chana Masala Rice bowl",
+            13.55
+        ],
+        [
+            "Chicken Vindaloo Rice Bowl",
+            14.68
+        ],
+        [
+            "Chole Chawal",
+            12.42
+        ],
+        [
+            "Egg Curry Rice Bowl",
+            14.68
+        ],
+        [
+            "Chicken Curry Rice Bowl",
+            14.68
+        ],
+        [
+            "Pani Puri",
+            10.16
+        ],
+        [
+            "Dahi Bhalla with papdi",
+            10.16
+        ],
+        [
+            "Aloo tikki",
+            3.38
+        ],
+        [
+            "Chaat Papdi",
+            9.03
+        ],
+        [
+            "Allu Tikki Chat",
+            10.16
+        ],
+        [
+            "Bhel Puri",
+            9.03
+        ],
+        [
+            "Chai Samosa Combo",
+            11.29,
+            "Sugar"
+        ],
+        [
+            "Crispy Samosas",
+            6.77
+        ],
+        [
+            "Mumbai Sev Puri",
+            9.03
+        ],
+        [
+            "Peanut Chatpata",
+            9.03
+        ],
+        [
+            "Veg Pakora",
+            11.29
+        ],
+        [
+            "Paneer Pakora",
+            12.42
+        ],
+        [
+            "Vegetable Spring Roll",
+            2.82
+        ],
+        [
+            "Shahi paneer poutine",
+            12.42
+        ],
+        [
+            "French fries",
+            6.77
+        ],
+        [
+            "Butter chicken poutine",
+            13.55
+        ],
+        [
+            "Noodle Spring Roll",
+            6.77
+        ],
+        [
+            "Amritsari Paneer Tikka",
+            16.94
+        ],
+        [
+            "Hariyali Paneer Tikka",
+            16.94
+        ],
+        [
+            "Paneer Tikka",
+            16.94
+        ],
+        [
+            "Achari Paneer Tikka",
+            16.94
+        ],
+        [
+            "Amritsari Soya Chaap",
+            15.81
+        ],
+        [
+            "Achari Soya Chaap",
+            15.81
+        ],
+        [
+            "Hariyali Soya Chaap",
+            15.81
+        ],
+        [
+            "Soya Chaap Platter",
+            28.24
+        ],
+        [
+            "Paneer Tikka Platter",
+            30.5
+        ],
+        [
+            "Lahori Fish Tikka",
+            18.07
+        ],
+        [
+            "Chicken Tikka Platter",
+            31.63
+        ],
+        [
+            "Punjaabi Special Murgh Tikka",
+            16.94
+        ],
+        [
+            "Murg Malai Tikka",
+            18.07
+        ],
+        [
+            "Fish Pakoda",
+            12.42
+        ],
+        [
+            "Hariyali Chicken Tikka",
+            18.07
+        ],
+        [
+            "Amritsari Chicken Tikka",
+            18.07
+        ],
+        [
+            "Achari Chicken Tikka",
+            18.07
+        ],
+        [
+            "Peshawari Chicken Tikka",
+            19.2
+        ],
+        [
+            "Reshmi Chicken Tikka",
+            18.07
+        ],
+        [
+            "Desi Masala Chicken",
+            16.94
+        ],
+        [
+            "Chilli Wings",
+            14.68
+        ],
+        [
+            "Amritsari Paneer Kadhai",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Dal Makhani",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Kadi Pakoda",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Rajma Masala",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Shahi Paneer",
+            19.2,
+            "Spice Level"
+        ],
+        [
+            "Punjaabi Paneer Bhurji",
+            19.2,
+            "Spice Level"
+        ],
+        [
+            "Malai Kofta",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Palak Paneer",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Chana Masala",
+            16.94,
+            "Spice Level"
+        ],
+        [
+            "Baingan Bharta",
+            15.81,
+            "Spice Level"
+        ],
+        [
+            "Ludhayanvi Bhindi",
+            15.81,
+            "Spice Level"
+        ],
+        [
+            "Dal Tadka Yellow",
+            16.94,
+            "Spice Level"
+        ],
+        [
+            "Lehsuni Saag",
+            15.81,
+            "Spice Level"
+        ],
+        [
+            "Paneer Cheese Butter Masala",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Dal Dhabewali ( BEST SELLER )",
+            16.94,
+            "Spice Level"
+        ],
+        [
+            "Soya Chaap Kadhai",
+            16.94,
+            "Spice Level"
+        ],
+        [
+            "Aaloo Gobhi",
+            15.81,
+            "Spice Level"
+        ],
+        [
+            "Aloo Mutter Chatpata",
+            15.81,
+            "Spice Level"
+        ],
+        [
+            "Methi Malai Mutter",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Mutter Paneer",
+            16.94,
+            "Spice Level"
+        ],
+        [
+            "Makhani Soya Chaap",
+            16.94,
+            "Spice Level"
+        ],
+        [
+            "Paneer Lababdar",
+            19.2,
+            "Spice Level"
+        ],
+        [
+            "Methi Malai Paneer",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Butter Chicken",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Goat Curry",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Kadhai Chicken",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Chicken Lababdar",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Chicken Tikka Masala",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Chicken Rara",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Handi Chicken",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Rara Gosht",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Lamb Kadhai",
+            19.2,
+            "Spice Level"
+        ],
+        [
+            "Methi Malai Chicken",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Saag Chicken",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Chicken Vindaloo",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Egg Curry",
+            16.94,
+            "Spice Level"
+        ],
+        [
+            "Tawa Chicken",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Chicken Korma",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Achari Chicken",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Fish Curry",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Mutton Rogan Josh",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Mutton Saag Wala",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Kadhai Goat",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Achari Mutton",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Mutton Korma",
+            20.33,
+            "Spice Level"
+        ],
+        [
+            "Manchow Soup",
+            11.29,
+            "Veg or Non Veg"
+        ],
+        [
+            "Hot & Sour Soup",
+            11.29,
+            "Veg or Non Veg"
+        ],
+        [
+            "Lemon & Coriander Soup",
+            11.29,
+            "Veg or Non Veg"
+        ],
+        [
+            "Tomato Soup",
+            11.29
+        ],
+        [
+            "Hakka Chow Mein",
+            18.07,
+            "Veg or Non Veg"
+        ],
+        [
+            "Vegetarian Manchurian",
+            18.07,
+            "Gravy Type"
+        ],
+        [
+            "Chilli Chicken",
+            16.94,
+            "Gravy Type"
+        ],
+        [
+            "Veg Hakka Noodles",
+            14.68
+        ],
+        [
+            "Chicken Triple Schezwan Rice",
+            20.33
+        ],
+        [
+            "Chili Paneer",
+            16.94,
+            "Gravy Type"
+        ],
+        [
+            "Crispy Chili Potato",
+            19.2
+        ],
+        [
+            "Veg Fried Rice",
+            14.68
+        ],
+        [
+            "Chilli Soya Chaap",
+            16.94,
+            "Gravy Type"
+        ],
+        [
+            "Lollipop Fried",
+            16.94
+        ],
+        [
+            "Lollipop Gravy",
+            18.07,
+            "Gravy Type"
+        ],
+        [
+            "Fish Chilli",
+            18.07,
+            "Gravy Type"
+        ],
+        [
+            "Veg schezwan Fried Rice",
+            15.81
+        ],
+        [
+            "Veg Burnt Garlic Fried Rice",
+            15.81
+        ],
+        [
+            "Veg Schezwan Noodles",
+            14.68
+        ],
+        [
+            "Chicken Fried Rice",
+            15.81
+        ],
+        [
+            "Chicken Schezwan Fried Rice",
+            16.94
+        ],
+        [
+            "Chicken Hakka Noodles",
+            16.94
+        ],
+        [
+            "Chicken Schezwan Noodles",
+            18.07
+        ],
+        [
+            "Chicken Burnt Garlic Rice",
+            16.94
+        ],
+        [
+            "Crispy Chilli Fries",
+            13.55
+        ],
+        [
+            "Gobi 65",
+            16.94
+        ],
+        [
+            "Chicken 65",
+            18.07
+        ],
+        [
+            "Lemon Chicken",
+            18.07
+        ],
+        [
+            "Crispy Chicken",
+            18.07
+        ],
+        [
+            "Pepper Chicken",
+            18.07
+        ],
+        [
+            "Honey Chilli Chicken",
+            18.07
+        ],
+        [
+            "Veg Triple Schezwan Rice",
+            19.2
+        ],
+        [
+            "Egg Fried Rice",
+            15.81,
+            "Make It Schezwan Fried Rice"
+        ],
+        [
+            "Steamed Momo's",
+            13.55,
+            "Veg or Non Veg"
+        ],
+        [
+            "Manchurian Momo's",
+            15.81,
+            "Veg or Non Veg"
+        ],
+        [
+            "Afghani Momo",
+            15.81,
+            "Veg or Non Veg"
+        ],
+        [
+            "Makhani Momo",
+            15.81,
+            "Veg or Non Veg"
+        ],
+        [
+            "Hariyali momo",
+            15.81,
+            "Veg or Non Veg"
+        ],
+        [
+            "Chilli Momo",
+            15.81,
+            "Veg or Non Veg"
+        ],
+        [
+            "Paneer Tikka Wrap",
+            13.55
+        ],
+        [
+            "Chicken tikka wrap",
+            14.68
+        ],
+        [
+            "Soya Chaap Tikka Wrap",
+            12.42
+        ],
+        [
+            "Vegetable Biryani",
+            15.81,
+            "Spice Level"
+        ],
+        [
+            "Tawa Pulao and Veggie Raita",
+            14.68,
+            "Spice Level"
+        ],
+        [
+            "Jeera Rice",
+            11.29
+        ],
+        [
+            "Steam Rice",
+            9.03
+        ],
+        [
+            "Mutter Pulao",
+            11.29
+        ],
+        [
+            "Lamb Biryani",
+            18.07,
+            "Spice Level"
+        ],
+        [
+            "Soya Chaap Biryani",
+            15.81,
+            "Spice Level"
+        ],
+        [
+            "Butter Naan",
+            3.94
+        ],
+        [
+            "Garlic Naan",
+            3.94
+        ],
+        [
+            "Amristasri or Paneer Kulcha",
+            7.9
+        ],
+        [
+            "Tandoori Roti",
+            2.81
+        ],
+        [
+            "Tandoori Naan",
+            3.38
+        ],
+        [
+            "Butter Roti",
+            3.38
+        ],
+        [
+            "Onion or Alloo Kulcha",
+            6.77
+        ],
+        [
+            "Punjaabi Laccha Parantha",
+            5.07
+        ],
+        [
+            "Chilli naan",
+            3.94
+        ],
+        [
+            "Chilly Garlic Naan",
+            5.64
+        ],
+        [
+            "Chicken kheema naan",
+            7.9
+        ],
+        [
+            "Coriander Naan",
+            3.94
+        ],
+        [
+            "Chicken Paratha",
+            11.29
+        ],
+        [
+            "Minty Mocktail Magic (Virgin Mocktail)",
+            7.9
+        ],
+        [
+            "Pink Guava Splash",
+            7.22
+        ],
+        [
+            "Oceanic Blue Bliss",
+            7.22
+        ],
+        [
+            "Rosy Berry Fizz",
+            7.22
+        ],
+        [
+            "Spicy Jeera Splash",
+            6.32
+        ],
+        [
+            "Zesty Lime Spark (Fresh Lime Soda)",
+            6.77
+        ],
+        [
+            "Mango Lassi",
+            6.32
+        ],
+        [
+            "Coke Can",
+            2.25
+        ],
+        [
+            "Ginger Ale Can",
+            2.25
+        ],
+        [
+            "Shikanji ( Lemonade)",
+            5.64
+        ],
+        [
+            "Diet Coke",
+            2.25
+        ],
+        [
+            "Salted Punjaabi Lassi",
+            5.64
+        ],
+        [
+            "Sweet Punjaabi Lassi",
+            5.64
+        ],
+        [
+            "Bottled Water",
+            2.25
+        ],
+        [
+            "Rose Lassi",
+            6.32
+        ],
+        [
+            "Thumsup",
+            3.38
+        ],
+        [
+            "Masala Chai",
+            3.94,
+            "Sugar"
+        ],
+        [
+            "Indian Style Coffee",
+            3.94,
+            "Sugar"
+        ],
+        [
+            "Rabri (8OZ)",
+            9.03
+        ],
+        [
+            "Jalebi",
+            5.64
+        ],
+        [
+            "Rasmalai",
+            5.64
+        ],
+        [
+            "Gulab Jamun",
+            5.64
+        ],
+        [
+            "Moong Dal Halwa",
+            12.42
+        ],
+        [
+            "Gulab Jamun with Rabri",
+            10.16
+        ],
+        [
+            "Kulfi",
+            4.51,
+            "Kulfi Flavour"
+        ],
+        [
+            "Matka Kulfi",
+            6.77,
+            "Kulfi Flavour"
+        ],
+        [
+            "Chutney ",
+            2.26
+        ],
+        [
+            "Raita",
+            2.26
+        ],
+        [
+            "Pickle",
+            2.26
+        ],
+        [
+            "Boondi raita",
+            4.51
+        ],
+        [
+            "Masala raita",
+            4.51
+        ],
+        [
+            "Veg raita",
+            5.64
+        ],
+        [
+            "Masala papad",
+            5.64
+        ],
+        [
+            "Dahi plain",
+            3.38
+        ],
+        [
+            "Papad",
+            3.38
+        ],
+        [
+            "Tray for Veg Curry",
+            54.24
+        ],
+        [
+            "Tray any Chicken Curry",
+            58.3
+        ],
+        [
+            "Tray for Goat Or lamb Curry",
+            61.01
+        ]
+    ],
+    "customization_dict": {
+        "Soya Malai Chaap-Must Try": [
+            {
+                "name": "Extra Malai",
+                "options": [
+                    [
+                        "Extra Malai (more creamy)",
+                        1.12
+                    ]
+                ],
+                "required": false
+            }
+        ],
+        "Chicken Biryani": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Tandoori Momo": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Manchurian (Veg)": [
+            {
+                "name": "Gravy Type",
+                "options": [
+                    [
+                        "Dry",
+                        1.12
+                    ],
+                    [
+                        "Semi Gravy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chinese Fried Rice": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            },
+            {
+                "name": "Make It Schezwan Fried Rice",
+                "options": [
+                    [
+                        "NO"
+                    ],
+                    [
+                        "YES",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Fried Momo's": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Royal Shake": [
+            {
+                "name": "Shake Flavor",
+                "options": [
+                    [
+                        "Black Current Shake"
+                    ],
+                    [
+                        "Anjeer Shake"
+                    ],
+                    [
+                        "Saffron (Kesar) Shake"
+                    ],
+                    [
+                        "Khus Shake"
+                    ],
+                    [
+                        "Fennel (Saunf) Shake"
+                    ],
+                    [
+                        "Banarsi Paan Shake"
+                    ],
+                    [
+                        "Butter Scotch Coffee Shake"
+                    ],
+                    [
+                        "Mango Butter Shake"
+                    ],
+                    [
+                        "Rabri Kulfi Shake"
+                    ],
+                    [
+                        "Thandai Shake"
+                    ],
+                    [
+                        "Cookie Butter Shake"
+                    ]
+                ],
+                "required": false
+            }
+        ],
+        "Chicken Tariwala": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chai Samosa Combo": [
+            {
+                "name": "Sugar",
+                "options": [
+                    [
+                        "No Sugar"
+                    ],
+                    [
+                        "Sweet"
+                    ],
+                    [
+                        "Very Sweet"
+                    ],
+                    [
+                        "Sugar on the side"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Amritsari Paneer Kadhai": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Dal Makhani": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Kadi Pakoda": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Rajma Masala": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Shahi Paneer": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Punjaabi Paneer Bhurji": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Malai Kofta": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Palak Paneer": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chana Masala": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Baingan Bharta": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Ludhayanvi Bhindi": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Dal Tadka Yellow": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Lehsuni Saag": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Paneer Cheese Butter Masala": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Dal Dhabewali ( BEST SELLER )": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Soya Chaap Kadhai": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Aaloo Gobhi": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Aloo Mutter Chatpata": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Methi Malai Mutter": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Mutter Paneer": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Makhani Soya Chaap": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Paneer Lababdar": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Methi Malai Paneer": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Butter Chicken": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Goat Curry": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Kadhai Chicken": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chicken Lababdar": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chicken Tikka Masala": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chicken Rara": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Handi Chicken": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Rara Gosht": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Lamb Kadhai": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Methi Malai Chicken": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Saag Chicken": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chicken Vindaloo": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Egg Curry": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Tawa Chicken": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chicken Korma": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Achari Chicken": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Fish Curry": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Mutton Rogan Josh": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Mutton Saag Wala": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Kadhai Goat": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Achari Mutton": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Mutton Korma": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Manchow Soup": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Hot & Sour Soup": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Lemon & Coriander Soup": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Hakka Chow Mein": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Vegetarian Manchurian": [
+            {
+                "name": "Gravy Type",
+                "options": [
+                    [
+                        "Dry",
+                        1.12
+                    ],
+                    [
+                        "Semi Gravy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chilli Chicken": [
+            {
+                "name": "Gravy Type",
+                "options": [
+                    [
+                        "Dry",
+                        1.12
+                    ],
+                    [
+                        "Semi Gravy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chili Paneer": [
+            {
+                "name": "Gravy Type",
+                "options": [
+                    [
+                        "Dry",
+                        1.12
+                    ],
+                    [
+                        "Semi Gravy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chilli Soya Chaap": [
+            {
+                "name": "Gravy Type",
+                "options": [
+                    [
+                        "Dry",
+                        1.12
+                    ],
+                    [
+                        "Semi Gravy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Lollipop Gravy": [
+            {
+                "name": "Gravy Type",
+                "options": [
+                    [
+                        "Dry",
+                        1.12
+                    ],
+                    [
+                        "Semi Gravy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Fish Chilli": [
+            {
+                "name": "Gravy Type",
+                "options": [
+                    [
+                        "Dry",
+                        1.12
+                    ],
+                    [
+                        "Semi Gravy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Egg Fried Rice": [
+            {
+                "name": "Make It Schezwan Fried Rice",
+                "options": [
+                    [
+                        "NO"
+                    ],
+                    [
+                        "YES",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Steamed Momo's": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Manchurian Momo's": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Afghani Momo": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Makhani Momo": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Hariyali momo": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Chilli Momo": [
+            {
+                "name": "Veg or Non Veg",
+                "options": [
+                    [
+                        "Veg"
+                    ],
+                    [
+                        "Non Veg",
+                        1.12
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Vegetable Biryani": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Tawa Pulao and Veggie Raita": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Lamb Biryani": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Soya Chaap Biryani": [
+            {
+                "name": "Spice Level",
+                "options": [
+                    [
+                        "Mild"
+                    ],
+                    [
+                        "Medium"
+                    ],
+                    [
+                        "Spicy"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Masala Chai": [
+            {
+                "name": "Sugar",
+                "options": [
+                    [
+                        "No Sugar"
+                    ],
+                    [
+                        "Sweet"
+                    ],
+                    [
+                        "Very Sweet"
+                    ],
+                    [
+                        "Sugar on the side"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Indian Style Coffee": [
+            {
+                "name": "Sugar",
+                "options": [
+                    [
+                        "No Sugar"
+                    ],
+                    [
+                        "Sweet"
+                    ],
+                    [
+                        "Very Sweet"
+                    ],
+                    [
+                        "Sugar on the side"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Kulfi": [
+            {
+                "name": "Kulfi Flavour",
+                "options": [
+                    [
+                        "Rabri",
+                        0.56
+                    ],
+                    [
+                        "Mango"
+                    ],
+                    [
+                        "Pista"
+                    ],
+                    [
+                        "Strawberry"
+                    ],
+                    [
+                        "Khoya"
+                    ],
+                    [
+                        "Almond"
+                    ]
+                ],
+                "required": true
+            }
+        ],
+        "Matka Kulfi": [
+            {
+                "name": "Kulfi Flavour",
+                "options": [
+                    [
+                        "Rabri",
+                        0.56
+                    ],
+                    [
+                        "Mango"
+                    ],
+                    [
+                        "Pista"
+                    ],
+                    [
+                        "Strawberry"
+                    ],
+                    [
+                        "Khoya"
+                    ],
+                    [
+                        "Almond"
+                    ]
+                ],
+                "required": true
+            }
+        ]
+    },
+    "deliveryConfig": {
+        "tiers": [
+            {
+                "distance": 5,
+                "price": 5
+            },
+            {
+                "distance": 10,
+                "price": 7
+            }
+        ],
+        "maxDistance": 10
+    },
+    "restaurant_faqs": [
+        {
+            "answer": "Yes, we allow pets on the store",
+            "id": "7608ced4-37cb-48a5-b8ad-fa020dd78156",
+            "question": "Can I bring my pet?"
+        },
+        {
+            "answer": "No, we have enough space available all the time",
+            "id": "8987e87d-98af-4424-8344-536bad9998d2",
+            "question": "Do I hate to wait if I visit during evening hours"
+        }
+    ],
+    "is_open": false,
+    "opening_hours": "Mon-Sun: 09:00 AM - 05:00 PM",
+    "has_delivery_service": false,
+    "greeting_message": "Hi! Welcome to Punjabi Indian Cuisine, how can I help you?",
+    "announcement": "",
+    "forward_number": "+18065352514"
+}

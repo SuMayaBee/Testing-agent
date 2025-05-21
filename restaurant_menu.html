@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurant Menu Explorer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1, h2, h3 {
+      color: #333;
+    }
+    .container {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .item-details {
+      white-space: pre-line;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+    label, input, select, button {
+      display: block;
+      margin-bottom: 10px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .customization {
+      margin: 15px 0;
+      padding: 10px;
+      background-color: #f1f1f1;
+      border-radius: 5px;
+    }
+    .examples {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .example-btn {
+      background-color: #2196F3;
+      flex: 1;
+    }
+    .example-btn:hover {
+      background-color: #0b7dda;
+    }
+    .categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .category-btn {
+      background-color: #673AB7;
+      flex: 0 0 auto;
+      font-size: 14px;
+    }
+    .category-btn:hover {
+      background-color: #5E35B1;
+    }
+    .restaurant-info {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <div class="restaurant-info">
+    <h1 id="restaurantName">Restaurant Menu Explorer</h1>
+    <p id="restaurantAddress"></p>
+  </div>
+  
+  <div class="container">
+    <h2>Search for Menu Items</h2>
+    <label for="itemName">Enter item name:</label>
+    <input type="text" id="itemName" placeholder="e.g., Tandoori Momo">
+    <button id="searchBtn">Search</button>
+    
+    <div id="categoriesContainer" class="categories"></div>
+    
+    <div id="itemDetailsContainer" class="item-details" style="display: none;"></div>
+    
+    <div id="customizationsContainer" style="display: none;">
+      <h3>Customize Your Order</h3>
+      <div id="customizationOptions"></div>
+      <button id="calculateBtn">Calculate Final Price</button>
+    </div>
+  </div>
+  
+  <div class="container">
+    <h2>Example Items</h2>
+    <p>Click to see example items from our menu:</p>
+    <div class="examples" id="examplesContainer">
+      <!-- Example buttons will be added dynamically -->
+    </div>
+  </div>
+
+  <!-- First import our restaurant menu JavaScript -->
+  <script src="restaurant_menu.js"></script>
+  
+  <!-- Then add UI interaction code -->
+  <script>
+    // Get DOM Elements
+    const restaurantNameElement = document.getElementById('restaurantName');
+    const restaurantAddressElement = document.getElementById('restaurantAddress');
+    const itemNameInput = document.getElementById('itemName');
+    const searchBtn = document.getElementById('searchBtn');
+    const itemDetailsContainer = document.getElementById('itemDetailsContainer');
+    const customizationsContainer = document.getElementById('customizationsContainer');
+    const customizationOptions = document.getElementById('customizationOptions');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const categoriesContainer = document.getElementById('categoriesContainer');
+    const examplesContainer = document.getElementById('examplesContainer');
+
+    let currentItemDetails = null;
+    let restaurantData = null;
+    
+    // Initialize the restaurant data
+    function initializeRestaurant() {
+      // Create a restaurant helper instance
+      const restaurantHelper = new RestaurantHelper("+19202808073");
+      restaurantData = restaurantHelper.getRestaurantData();
+      
+      // Set restaurant name and address
+      restaurantNameElement.textContent = restaurantData.restaurant_name;
+      restaurantAddressElement.textContent = restaurantData.restaurant_address;
+      
+      // Create category buttons
+      restaurantData.category_list.forEach(category => {
+        const categoryBtn = document.createElement('button');
+        categoryBtn.className = 'category-btn';
+        categoryBtn.textContent = category;
+        categoryBtn.addEventListener('click', () => {
+          displayCategoryItems(category);
+        });
+        categoriesContainer.appendChild(categoryBtn);
+      });
+      
+      // Create example buttons (using the first 4 items or fewer)
+      const exampleItems = restaurantData.item_list.slice(0, 4);
+      exampleItems.forEach(item => {
+        const exampleBtn = document.createElement('button');
+        exampleBtn.className = 'example-btn';
+        exampleBtn.textContent = item[0];
+        exampleBtn.addEventListener('click', () => {
+          itemNameInput.value = item[0];
+          searchBtn.click();
+        });
+        examplesContainer.appendChild(exampleBtn);
+      });
+    }
+    
+    // Display items from a specific category
+    function displayCategoryItems(category) {
+      // We'd need to get items by category, but our structure doesn't directly support this
+      // Instead, we'll just show all items and highlight matching ones would be done in a real app
+      const itemsList = document.createElement('div');
+      itemsList.className = 'item-details';
+      itemsList.innerHTML = `<h3>${category} Items</h3>`;
+      
+      const items = restaurantData.item_list.filter(item => {
+        // This is just a placeholder - in a real app, we would filter by category
+        return true;
+      });
+      
+      if (items.length > 0) {
+        const ul = document.createElement('ul');
+        items.forEach(item => {
+          const li = document.createElement('li');
+          const button = document.createElement('button');
+          button.textContent = `${item[0]} - $${item[1].toFixed(2)}`;
+          button.style.width = '100%';
+          button.style.textAlign = 'left';
+          button.addEventListener('click', () => {
+            itemNameInput.value = item[0];
+            searchBtn.click();
+          });
+          li.appendChild(button);
+          ul.appendChild(li);
+        });
+        itemsList.appendChild(ul);
+      } else {
+        itemsList.innerHTML += '<p>No items found in this category</p>';
+      }
+      
+      itemDetailsContainer.innerHTML = '';
+      itemDetailsContainer.appendChild(itemsList);
+      itemDetailsContainer.style.display = 'block';
+      customizationsContainer.style.display = 'none';
+    }
+
+    // Search for item
+    searchBtn.addEventListener('click', () => {
+      const itemName = itemNameInput.value.trim();
+      if (!itemName) {
+        alert('Please enter an item name');
+        return;
+      }
+
+      currentItemDetails = findItemDetails(restaurantData, itemName);
+      
+      // Display item details
+      itemDetailsContainer.textContent = currentItemDetails ? 
+        formatItemDetails(currentItemDetails).replace(/\n={50,}\n/g, '') :
+        "Item not found in menu.";
+      itemDetailsContainer.style.display = 'block';
+      
+      // Setup customization options if item exists and has customizations
+      if (currentItemDetails && currentItemDetails.customizations.length > 0) {
+        // Clear existing options
+        customizationOptions.innerHTML = '';
+        
+        // Add customization options
+        currentItemDetails.customizations.forEach(customization => {
+          const customDiv = document.createElement('div');
+          customDiv.className = 'customization';
+          
+          const customLabel = document.createElement('label');
+          customLabel.textContent = `${customization.name}${customization.required ? ' (Required)' : ''}:`;
+          
+          const select = document.createElement('select');
+          select.id = `custom-${customization.name.replace(/\s+/g, '-').toLowerCase()}`;
+          select.name = customization.name;
+          
+          // Add default empty option if not required
+          if (!customization.required) {
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.textContent = "-- Select an option --";
+            select.appendChild(defaultOption);
+          }
+          
+          // Add options
+          customization.options.forEach(option => {
+            const optElement = document.createElement('option');
+            optElement.value = option[0];
+            
+            if (option.length > 1) {
+              optElement.textContent = `${option[0]} (+$${option[1].toFixed(2)})`;
+            } else {
+              optElement.textContent = option[0];
+            }
+            
+            select.appendChild(optElement);
+          });
+          
+          customDiv.appendChild(customLabel);
+          customDiv.appendChild(select);
+          customizationOptions.appendChild(customDiv);
+        });
+        
+        customizationsContainer.style.display = 'block';
+      } else {
+        customizationsContainer.style.display = 'none';
+      }
+    });
+
+    // Calculate final price
+    calculateBtn.addEventListener('click', () => {
+      if (!currentItemDetails) return;
+      
+      const selectedOptions = {};
+      
+      // Get all selected options
+      currentItemDetails.customizations.forEach(customization => {
+        const selectId = `custom-${customization.name.replace(/\s+/g, '-').toLowerCase()}`;
+        const selectElement = document.getElementById(selectId);
+        const selectedValue = selectElement.value;
+        
+        if (selectedValue) {
+          selectedOptions[customization.name] = selectedValue;
+        }
+      });
+      
+      // Check if all required customizations are selected
+      const missingRequired = currentItemDetails.customizations
+        .filter(c => c.required)
+        .some(c => !(c.name in selectedOptions));
+      
+      if (missingRequired) {
+        alert('Please select all required customization options');
+        return;
+      }
+      
+      // Update item details with selected options
+      itemDetailsContainer.textContent = formatItemDetails(currentItemDetails, selectedOptions).replace(/\n={50,}\n/g, '');
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initializeRestaurant);
+  </script>
+</body>
+</html> 
