@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "https://testing-agent-app-pkru6.ondigitalocean.app/api/$1"
+        }
+    ]
+}
