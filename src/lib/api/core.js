@@ -3,7 +3,8 @@
 //const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 // const API_BASE_URL = "https://testing-agent-app-pkru6.ondigitalocean.app/api" // Old absolute URL
 //const API_BASE_URL = "/api"; // Use relative path for proxy
-const API_BASE_URL = "http://localhost:8000/api"
+//const API_BASE_URL = "http://localhost:8000/api"
+const API_BASE_URL = "https://testing-agent-app-pkru6.ondigitalocean.app/api";
 
 // Enhanced cache configuration with tiered approach
 const CACHE_DURATIONS = {
