@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { voiceAgentAPI } from '../../lib/api';
+import { voiceAgentAPI, testsAPI } from '../../lib/api';
+import CurrentConversationViewer from './CurrentConversationViewer';
 import { 
   PlayIcon, 
   ArrowRightIcon,
@@ -16,34 +17,43 @@ function SimulationsPage() {
   const { currentOrganizationUsername } = useApp();
   const navigate = useNavigate();
   const [simulations, setSimulations] = useState([]);
+  const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
   useEffect(() => {
-    async function fetchSimulations() {
+    async function fetchData() {
       if (!currentOrganizationUsername) return;
       
       try {
         setLoading(true);
         setError(null);
         
-        // Fetch real data from the backend
-        const result = await voiceAgentAPI.getAllArchivedConversations(currentOrganizationUsername);
+        // Fetch both simulations and tests in parallel
+        const [simulationsResult, testsResult] = await Promise.all([
+          voiceAgentAPI.getAllArchivedConversations(currentOrganizationUsername),
+          testsAPI.getTests(currentOrganizationUsername)
+        ]);
         
-        if (result.error) {
-          throw new Error(result.error);
+        if (simulationsResult.error) {
+          throw new Error(simulationsResult.error);
         }
         
-        setSimulations(result.archived_conversations || []);
+        if (testsResult.error) {
+          throw new Error(testsResult.error);
+        }
+        
+        setSimulations(simulationsResult.archived_conversations || []);
+        setTests(testsResult.tests || []);
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching simulations:', err);
-        setError(err.message || 'Failed to load simulations');
+        console.error('Error fetching data:', err);
+        setError(err.message || 'Failed to load data');
         setLoading(false);
       }
     }
     
-    fetchSimulations();
+    fetchData();
   }, [currentOrganizationUsername]);
   
   const getScoreClass = (score) => {
@@ -122,6 +132,27 @@ function SimulationsPage() {
           <p className="text-red-700">{error}</p>
         </div>
       )}
+
+      {/* Current Conversations Section */}
+      {tests.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Current Conversations</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {tests.slice(0, 4).map((test) => (
+              <CurrentConversationViewer 
+                key={test.id} 
+                testId={test.id} 
+                testName={test.name}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Archived Simulations Section */}
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">Archived Simulations</h2>
+      </div>
       
       {simulations.length === 0 ? (
         <div className="bg-white rounded-lg border border-secondary-200 shadow-card p-6 text-center">

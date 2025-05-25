@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../../../context/AppContext';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { voiceAgentAPI } from '../../../lib/api';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../lib/firebase-config';
 
 // Import custom components
 import TaskList from './TaskList';
@@ -12,7 +14,6 @@ import TestConfiguration from './TestConfiguration';
 import TestExecutionHeader from './TestExecutionHeader';
 import TestExecutionInfo from './TestExecutionInfo';
 import { RunningActionButtons, CompletedActionButtons } from './ActionButtons';
-import TimelineVisualization from '../../common/TimelineVisualization';
 import CallRecording from '../../common/CallRecording';
 
 // Import utilities
@@ -24,7 +25,10 @@ import {
   cleanTestMetrics,
   cancelTest 
 } from './api';
-import { setupTranscriptPolling } from './utils';
+import { setupTranscriptPolling, formatMetricsForDisplay } from './utils';
+import { normalizeScore } from './constants';
+import { realtimeMonitor } from './realtimeMonitor';
+import { firebaseTranscriptService } from './firebaseTranscriptService';
 
 function RunTest() {
   const { testId } = useParams();
@@ -60,10 +64,17 @@ function RunTest() {
   // Add a new state for cleaning status
   const [cleaningMetrics, setCleaningMetrics] = useState(false);
   
+  // Add state for manual Firebase metrics fetching
+  const [fetchingMetrics, setFetchingMetrics] = useState(false);
+  
   // Add a ref to maintain transcript persistence across re-renders and state changes
   const persistentTranscriptRef = useRef([]);
   
   const [callSid, setCallSid] = useState(null);
+  
+  // Real-time monitoring state
+  const [realtimeMonitoring, setRealtimeMonitoring] = useState(false);
+  const [monitoredCalls, setMonitoredCalls] = useState([]);
   
   // Fetch test details and associated tasks/metrics
   useEffect(() => {
@@ -102,6 +113,15 @@ function RunTest() {
         // This happens silently in the background when the user navigates away
         handleSaveResultsQuietly();
       }
+      
+      // Stop real-time monitoring when component unmounts
+      if (realtimeMonitor.isMonitoring()) {
+        console.log("Stopping real-time monitoring on component unmount");
+        realtimeMonitor.stopMonitoring();
+      }
+      
+      // Reset Firebase transcript service
+      firebaseTranscriptService.reset();
     };
   }, [simulationStatus, savedSimulationId, archived]);
   
@@ -177,7 +197,36 @@ function RunTest() {
         // Store the call SID
         setCallSid(result.call_sid);
         
-        // Add initial transcript entry
+        // Initialize Firebase transcript service
+        try {
+          await firebaseTranscriptService.initializeCurrentConversation(
+            currentOrganizationUsername,
+            testId,
+            selectedPhoneNumber,
+            result.call_sid
+          );
+          console.log("✅ Firebase transcript service initialized");
+          
+          // Save initial transcript entry to Firebase
+          const initialFirebaseMessage = {
+            agent: 'system',
+            message: `Call initiated to ${selectedPhoneNumber} with call SID: ${result.call_sid}`,
+            session_id: result.call_sid,
+            timestamp: new Date().toISOString()
+          };
+          
+          try {
+            await firebaseTranscriptService.addMessage(initialFirebaseMessage);
+            console.log("✅ Saved initial message to Firebase");
+          } catch (messageError) {
+            console.error("❌ Failed to save initial message to Firebase:", messageError);
+          }
+        } catch (firebaseError) {
+          console.error("❌ Failed to initialize Firebase transcript service:", firebaseError);
+          // Continue with the test even if Firebase initialization fails
+        }
+        
+        // Add initial transcript entry for local display
         const initialTranscript = [{ 
           speaker: 'system', 
           text: `Call initiated to ${selectedPhoneNumber} with call SID: ${result.call_sid}`,
@@ -186,6 +235,155 @@ function RunTest() {
         
         setTranscript(initialTranscript);
         persistentTranscriptRef.current = initialTranscript;
+        
+        // Start real-time monitoring for this specific call
+        const callerNumbers = ["+12495042461", "12495042461"]; // The testing agent numbers
+        const recipientNumbers = test?.target_phone_numbers || [selectedPhoneNumber]; // The restaurant numbers
+        
+        console.log("🔍 Starting real-time monitoring for call...");
+        console.log("📞 Monitoring calls from:", callerNumbers);
+        console.log("📞 Monitoring calls to:", recipientNumbers);
+        setRealtimeMonitoring(true);
+        
+        // Set up real-time monitoring callbacks
+        const monitoringCallbacks = {
+          onTranscriptUpdate: async (callId, newEntries, allEntries) => {
+            console.log(`📝 Real-time transcript update for ${callId}: ${newEntries.length} new entries`);
+            console.log("New entries:", newEntries);
+            console.log("🔍 DEBUG: Raw entry roles from real-time monitor:", newEntries.map(e => ({role: e.role, message: e.message?.substring(0, 30)})));
+            
+            // Save new entries to Firebase conversations/current path
+            if (newEntries.length > 0) {
+              console.log("🔥🔥🔥 FIREBASE SAVE STARTING 🔥🔥🔥");
+              console.log("🔥 Preparing to save messages to Firebase...");
+              
+              // Fixed mapping: role 'agent' = TestAgent (testing/OpenAI), role 'user' = OrderingAgent (phoneline/restaurant AI)
+              const firebaseMessages = newEntries.map(entry => ({
+                agent: entry.role === 'agent' ? 'TestAgent' : 'OrderingAgent',
+                message: entry.message,
+                session_id: entry.rawData?.session_id || callId,
+                timestamp: entry.timestamp
+              }));
+              
+              console.log("🔥 Firebase messages to save:", firebaseMessages);
+              console.log(`🔥 Attempting to save ${firebaseMessages.length} messages to Firebase...`);
+              
+              // Save to Firebase using the transcript service
+              try {
+                const saveResult = await firebaseTranscriptService.addMessages(firebaseMessages);
+                if (saveResult) {
+                  console.log(`✅✅✅ SUCCESS: Saved ${firebaseMessages.length} messages to Firebase conversations/current ✅✅✅`);
+                } else {
+                  console.error("❌❌❌ FAILED: addMessages returned false ❌❌❌");
+                }
+              } catch (error) {
+                console.error("❌❌❌ ERROR saving messages to Firebase:", error);
+                console.error("❌ Error details:", error.message, error.code);
+                
+                // Try to save individual messages if batch save fails
+                console.log("🔄 Attempting to save messages individually...");
+                for (const message of firebaseMessages) {
+                  try {
+                    const individualResult = await firebaseTranscriptService.addMessage(message);
+                    if (individualResult) {
+                      console.log(`✅ Saved individual message: ${message.agent} - ${message.message?.substring(0, 30)}...`);
+                    } else {
+                      console.error(`❌ Failed to save individual message (returned false)`);
+                    }
+                  } catch (individualError) {
+                    console.error(`❌ Failed to save individual message:`, individualError);
+                  }
+                }
+              }
+              
+              console.log("🔥🔥🔥 FIREBASE SAVE COMPLETED 🔥🔥🔥");
+            }
+            
+            // Convert Firebase transcript format to our component format for local display
+            // CORRECTED mapping: TestAgent (caller/testing) = 'user' speaker, OrderingAgent (restaurant AI being tested) = 'agent' speaker
+            const formattedEntries = allEntries.map(entry => ({
+              speaker: entry.role === 'agent' ? 'user' : 'agent',
+              text: entry.message,
+              timestamp: entry.timestamp,
+              session_id: entry.rawData?.session_id || callId
+            }));
+
+            console.log("🔍 DEBUG: All entries from real-time monitor:", allEntries.map(e => ({role: e.role, message: e.message?.substring(0, 30)})));
+            console.log("🔍 DEBUG: Formatted entries for local display:", formattedEntries.map(e => ({speaker: e.speaker, text: e.text?.substring(0, 30)})));
+
+            // Update local transcript state for immediate UI feedback
+            setTranscript(prev => {
+              // Merge with existing system messages
+              const systemMessages = prev.filter(msg => msg.speaker === 'system');
+              const combinedTranscript = [...systemMessages, ...formattedEntries];
+              persistentTranscriptRef.current = combinedTranscript;
+              console.log(`📝 Updated local transcript: ${combinedTranscript.length} total messages`);
+              return combinedTranscript;
+            });
+          },
+          
+          onCallStatusChange: async (callId, status, callData) => {
+            console.log(`📞 Call status change for ${callId}: ${status}`);
+            
+            // Update Firebase with call status
+            if (status === 'completed') {
+              firebaseTranscriptService.updateCallStatus('completed').catch(error => {
+                console.error("❌ Failed to update call status in Firebase:", error);
+              });
+            } else if (status === 'started') {
+              firebaseTranscriptService.updateCallStatus('in_progress').catch(error => {
+                console.error("❌ Failed to update call status in Firebase:", error);
+              });
+            } else if (status === 'cancelled') {
+              firebaseTranscriptService.updateCallStatus('cancelled').catch(error => {
+                console.error("❌ Failed to update call status in Firebase:", error);
+              });
+            }
+            
+            if (status === 'completed') {
+              console.log("✅ Call completed via real-time monitoring");
+              setSimulationStatus(STATUSES.COMPLETED);
+              setRealtimeMonitoring(false);
+              
+              // Ensure complete transcript is saved to Firebase
+              const currentTranscript = persistentTranscriptRef.current.length > 0 ? 
+                persistentTranscriptRef.current : transcript;
+              
+              firebaseTranscriptService.ensureTranscriptSaved(currentTranscript)
+                .then(() => {
+                  console.log("✅ Ensured complete transcript is saved to Firebase");
+                })
+                .catch((firebaseError) => {
+                  console.error("❌ Failed to ensure transcript is saved to Firebase:", firebaseError);
+                });
+              
+              // Mark all tasks as completed
+              setTasksInFlow(prev => prev.map(task => ({ ...task, status: STATUSES.COMPLETED })));
+              
+              // Stop monitoring
+              realtimeMonitor.stopMonitoring();
+            } else if (status === 'started') {
+              // Update monitored calls list
+              setMonitoredCalls(prev => [...prev, { callId, ...callData }]);
+            }
+          },
+          
+          onError: (error) => {
+            console.error("❌ Real-time monitoring error:", error);
+            setError(`Real-time monitoring error: ${error.message}`);
+          }
+        };
+        
+        // Start the real-time monitoring
+        try {
+          await realtimeMonitor.startMonitoring(callerNumbers, recipientNumbers, monitoringCallbacks);
+          console.log("✅ Real-time monitoring started successfully");
+        } catch (monitoringError) {
+          console.error("❌ Failed to start real-time monitoring:", monitoringError);
+          setError(`Warning: Real-time monitoring failed to start: ${monitoringError.message}`);
+          setRealtimeMonitoring(false);
+          // Continue with the test even if monitoring fails
+        }
         
         // Set the first task to running
         if (tasksInFlow.length > 0) {
@@ -210,9 +408,9 @@ function RunTest() {
           setSavedSimulationId,
           testMetrics
         });
-      } catch (callError) {
-        console.error('Error initiating call:', callError);
-        setError(callError.message || 'Failed to initiate call');
+      } catch (err) {
+        console.error('Error running test:', err);
+        setError(err.message || 'Failed to run test');
         setRunning(false);
         setSimulationStatus(STATUSES.PENDING);
       }
@@ -349,38 +547,285 @@ function RunTest() {
       setCancelling(true);
       setError(null);
       
-      const result = await cancelTest(currentOrganizationUsername, testId);
+      console.log(`🛑 Cancelling test ${testId} with call SID: ${callSid}`);
+      
+      // Call the backend API to cancel the call, passing the call_sid if available
+      const result = await cancelTest(currentOrganizationUsername, testId, callSid);
+      
+      console.log("📞 Call cancellation result:", result);
       
       if (result.status === "success" || result.status === "warning") {
+        // Stop real-time monitoring if it's running
+        if (realtimeMonitor.isMonitoring()) {
+          console.log("🛑 Stopping real-time monitoring due to test cancellation");
+          
+          // Mark the specific call as cancelled if we have a call_sid
+          if (callSid) {
+            realtimeMonitor.markCallAsCancelled(callSid);
+          }
+          
+          realtimeMonitor.stopMonitoring();
+          setRealtimeMonitoring(false);
+          setMonitoredCalls([]);
+        }
+        
+        // Update Firebase with cancelled status
+        firebaseTranscriptService.updateCallStatus('cancelled')
+          .then(() => {
+            console.log("✅ Updated Firebase with cancelled status");
+            
+            // Ensure transcript is saved to Firebase before cancelling
+            const currentTranscript = persistentTranscriptRef.current.length > 0 ? 
+              persistentTranscriptRef.current : transcript;
+            if (currentTranscript.length > 0) {
+              return firebaseTranscriptService.ensureTranscriptSaved(currentTranscript);
+            }
+          })
+          .then(() => {
+            console.log("✅ Ensured cancelled call transcript is saved to Firebase");
+          })
+          .catch((firebaseError) => {
+            console.error("❌ Failed to update cancelled status in Firebase:", firebaseError);
+          });
+        
         // Add a system message to the transcript
-        const updatedTranscript = [...transcript];
-        updatedTranscript.push({
+        const cancellationMessage = {
           speaker: 'system',
           text: 'Call was cancelled by user.',
           timestamp: new Date()
-        });
+        };
+        
+        const updatedTranscript = [...transcript, cancellationMessage];
         setTranscript(updatedTranscript);
         persistentTranscriptRef.current = updatedTranscript;
+        
+        // Save cancellation message to Firebase
+        firebaseTranscriptService.addMessage({
+          agent: 'system',
+          message: 'Call was cancelled by user.',
+          session_id: callSid
+        })
+          .then(() => {
+            console.log("✅ Added cancellation message to Firebase");
+          })
+          .catch((firebaseError) => {
+            console.error("❌ Failed to add cancellation message to Firebase:", firebaseError);
+          });
         
         // Update the simulation status
         setSimulationStatus(STATUSES.COMPLETED);
         
-        // Mark all tasks as failed
+        // Mark all tasks as failed/cancelled
         setTasksInFlow(prev => prev.map(task => ({ ...task, status: STATUSES.FAILED })));
         
         // Don't auto-save the cancelled test to avoid it appearing in simulations
         setArchived(true); // Mark as archived so it doesn't get auto-saved on unmount
         setSavedSimulationId('cancelled'); // Mark with a special ID to prevent further save attempts
+        
+        console.log("✅ Test cancellation completed successfully");
       } else {
         // Show error
-        setError(result.message || "Failed to cancel call");
+        const errorMessage = result.message || "Failed to cancel call";
+        console.error("❌ Call cancellation failed:", errorMessage);
+        setError(errorMessage);
       }
     } catch (err) {
-      console.error('Error cancelling test:', err);
+      console.error('❌ Error cancelling test:', err);
       setError(err.message || 'Failed to cancel test');
     } finally {
       setCancelling(false);
       setRunning(false);
+    }
+  };
+  
+  // Manual function to test Firebase connection (for debugging)
+  const handleTestFirebaseConnection = async () => {
+    try {
+      console.log("🔥 Testing Firebase connection...");
+      const result = await firebaseTranscriptService.testConnection();
+      
+      if (result) {
+        console.log("✅ Firebase connection test successful");
+        alert("✅ Firebase connection test successful! Check console for details.");
+      } else {
+        console.error("❌ Firebase connection test failed");
+        alert("❌ Firebase connection test failed. Check console for details.");
+      }
+    } catch (error) {
+      console.error("❌ Error testing Firebase connection:", error);
+      alert(`❌ Error testing Firebase connection: ${error.message}`);
+    }
+  };
+  
+  // Manual function to save current transcript to Firebase (for debugging)
+  const handleSaveTranscriptToFirebase = async () => {
+    if (!firebaseTranscriptService.isInitialized) {
+      console.error("❌ Firebase transcript service not initialized");
+      alert("Firebase service not initialized. Please start a test first.");
+      return;
+    }
+
+    try {
+      const currentTranscript = persistentTranscriptRef.current.length > 0 ? 
+        persistentTranscriptRef.current : transcript;
+      
+      if (currentTranscript.length === 0) {
+        alert("No transcript data to save");
+        return;
+      }
+
+      console.log(`🔥 Manually saving ${currentTranscript.length} messages to Firebase...`);
+      
+      const result = await firebaseTranscriptService.saveCompleteTranscript(currentTranscript);
+      
+      if (result) {
+        console.log("✅ Successfully saved complete transcript to Firebase");
+        alert(`Successfully saved ${currentTranscript.length} messages to Firebase!`);
+      } else {
+        console.error("❌ Failed to save transcript to Firebase");
+        alert("Failed to save transcript to Firebase");
+      }
+    } catch (error) {
+      console.error("❌ Error saving transcript to Firebase:", error);
+      alert(`Error saving transcript: ${error.message}`);
+    }
+  };
+
+  // Manual function to trigger metrics evaluation (for debugging)
+  const handleManualMetricsEvaluation = async () => {
+    if (!callSid || !currentOrganizationUsername || !testId) {
+      alert("Missing required data for metrics evaluation (callSid, organization, or testId)");
+      return;
+    }
+
+    try {
+      console.log("🔍 Manually triggering metrics evaluation...");
+      console.log("📊 Using callSid:", callSid);
+      console.log("📊 Using testId:", testId);
+      console.log("📊 Using organization:", currentOrganizationUsername);
+
+      // Force fetch the latest transcript with metrics
+      const transcriptResult = await voiceAgentAPI.getTranscript(
+        currentOrganizationUsername,
+        testId,
+        callSid
+      );
+
+      console.log("📊 Manual metrics fetch result:", transcriptResult);
+
+      if (transcriptResult.metrics_results && Object.keys(transcriptResult.metrics_results).length > 0) {
+        // Format metrics for display
+        const formattedMetrics = formatMetricsForDisplay(transcriptResult, testMetrics);
+        
+        console.log("✅ Manual metrics evaluation successful:", formattedMetrics);
+        
+        // Update state with metrics
+        setMetricsResults(formattedMetrics);
+        setOverallScore(normalizeScore(transcriptResult.overall_score));
+        
+        // Update transcript if we got a better one
+        if (transcriptResult.transcript && transcriptResult.transcript.length > 0) {
+          setTranscript(transcriptResult.transcript);
+          persistentTranscriptRef.current = transcriptResult.transcript;
+        }
+        
+        alert(`✅ Metrics evaluation successful! Found ${formattedMetrics.length} metrics.`);
+      } else {
+        console.warn("⚠️ No metrics results found in manual fetch");
+        alert("⚠️ No metrics results available yet. The backend may still be processing the evaluation.");
+      }
+    } catch (error) {
+      console.error("❌ Error in manual metrics evaluation:", error);
+      alert(`❌ Error triggering metrics evaluation: ${error.message}`);
+    }
+  };
+  
+  // Direct Firebase metrics fetching function
+  const fetchMetricsFromFirebase = async () => {
+    if (!currentOrganizationUsername || !testId) {
+      console.log("❌ Missing organization or test ID for metrics fetch");
+      return null;
+    }
+
+    try {
+      console.log("🔍 Fetching metrics directly from Firebase...");
+      console.log(`📁 Path: organizations/${currentOrganizationUsername}/tests/${testId}/conversations/current`);
+      
+      // Get the conversation document directly from Firebase
+      const conversationPath = `organizations/${currentOrganizationUsername}/tests/${testId}/conversations/current`;
+      const docRef = doc(db, conversationPath);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        console.log("❌ No conversation document found");
+        return null;
+      }
+      
+      const conversationData = docSnap.data();
+      console.log("📊 Conversation data keys:", Object.keys(conversationData));
+      
+      // Check for metrics_results
+      const metricsResults = conversationData.metrics_results;
+      const overallScore = conversationData.overall_score;
+      const evalMetadata = conversationData.eval_metadata;
+      
+      console.log("🎯 Metrics results found:", !!metricsResults);
+      console.log("🎯 Overall score found:", overallScore);
+      console.log("🎯 Eval metadata found:", !!evalMetadata);
+      
+      if (metricsResults && typeof metricsResults === 'object') {
+        console.log("✅ Found metrics results with", Object.keys(metricsResults).length, "metrics");
+        
+        // Convert Firebase metrics format to frontend format
+        const formattedMetrics = Object.entries(metricsResults).map(([metricId, metricData]) => ({
+          metric_id: metricId,
+          metric_name: metricData.metric_name || 'Unknown Metric',
+          score: metricData.score || 0,
+          details: metricData.details?.explanation || 'No explanation available',
+          improvement_areas: metricData.improvement_areas || []
+        }));
+        
+        console.log("📊 Formatted metrics:", formattedMetrics.map(m => ({
+          name: m.metric_name,
+          score: m.score
+        })));
+        
+        // Update state with the fetched metrics
+        setMetricsResults(formattedMetrics);
+        setOverallScore(overallScore);
+        
+        return {
+          metrics: formattedMetrics,
+          overallScore,
+          evalMetadata
+        };
+      } else {
+        console.log("❌ No valid metrics_results found in conversation");
+        return null;
+      }
+      
+    } catch (error) {
+      console.error("❌ Error fetching metrics from Firebase:", error);
+      return null;
+    }
+  };
+  
+  // Manual Firebase metrics fetch handler
+  const handleFetchMetricsFromFirebase = async () => {
+    setFetchingMetrics(true);
+    try {
+      const result = await fetchMetricsFromFirebase();
+      if (result) {
+        console.log("✅ Successfully fetched metrics from Firebase manually");
+      } else {
+        console.log("⚠️ No metrics found in Firebase");
+        setError("No metrics found in Firebase. The evaluation may not be complete yet.");
+      }
+    } catch (error) {
+      console.error("❌ Error in manual Firebase metrics fetch:", error);
+      setError(`Failed to fetch metrics: ${error.message}`);
+    } finally {
+      setFetchingMetrics(false);
     }
   };
   
@@ -484,15 +929,20 @@ function RunTest() {
             simulationId={simulationId}
             selectedPhoneNumber={selectedPhoneNumber}
             overallScore={overallScore}
+            realtimeMonitoring={realtimeMonitoring}
+            monitoredCalls={monitoredCalls}
+            onSaveTranscriptToFirebase={handleSaveTranscriptToFirebase}
+            onTestFirebaseConnection={handleTestFirebaseConnection}
+            onManualMetricsEvaluation={handleManualMetricsEvaluation}
+            callSid={callSid}
+            showMetricsButton={simulationStatus === STATUSES.COMPLETED && (!metricsResults || metricsResults.length === 0)}
           />
           
           <TaskList tasksInFlow={tasksInFlow} />
           
           {transcript.length > 0 && (
-            <TimelineVisualization transcript={transcript} />
+            <TranscriptViewer transcript={transcript} realtimeMonitoring={realtimeMonitoring} />
           )}
-          
-          <TranscriptViewer transcript={transcript} />
           
           {simulationStatus === STATUSES.RUNNING && (
             <RunningActionButtons 
@@ -511,6 +961,8 @@ function RunTest() {
               <CompletedActionButtons 
                 testId={testId} 
                 handleRunTest={handleRunTest} 
+                handleFetchMetricsFromFirebase={handleFetchMetricsFromFirebase}
+                fetchingMetrics={fetchingMetrics}
               />
             </>
           )}

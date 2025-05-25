@@ -211,13 +211,14 @@ export async function cleanTestMetrics(currentOrganizationUsername, testId, setT
 }
 
 // Cancel a running test
-export async function cancelTest(currentOrganizationUsername, testId) {
-  console.log(`Cancelling test ${testId}`);
+export async function cancelTest(currentOrganizationUsername, testId, callSid = null) {
+  console.log(`Cancelling test ${testId}${callSid ? ` with call SID ${callSid}` : ''}`);
   
   // Call the backend API to cancel the call
   const result = await voiceAgentAPI.cancelCall(
     currentOrganizationUsername,
-    testId
+    testId,
+    callSid
   );
   
   console.log("Cancellation result:", result);

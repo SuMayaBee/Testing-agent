@@ -31,3 +31,7 @@ export const callAnalyticsAPI = {
     return response.json();
   }
 };
+
+// Firebase imports for real-time conversation fetching
+import { db } from './firebase-config';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';

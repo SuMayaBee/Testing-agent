@@ -86,11 +86,11 @@ const TimelineVisualization = ({ transcript, maxHeight = 400 }) => {
       const currentMsg = messages[i];
       const nextMsg = messages[i + 1];
       
-      // Only calculate if the speakers are different (a response)
+      // Only calculate response time for actual conversation turns (different speakers)
       if (currentMsg.speaker !== nextMsg.speaker) {
         const responseTime = nextMsg.timestampMs - currentMsg.timestampMs;
         
-        // Attribute the response time to the responder
+        // Attribute the response time to the responder (who is responding)
         if (nextMsg.speaker === 'user') {
           phonelineResponseTime += responseTime;
           phonelineResponseCount++;
@@ -127,9 +127,11 @@ const TimelineVisualization = ({ transcript, maxHeight = 400 }) => {
       // Calculate response time
       if (i < messages.length - 1) {
         const nextMsg = messages[i + 1];
+        // Only calculate response time for actual conversation turns (different speakers)
         if (currentMsg.speaker !== nextMsg.speaker) {
           responseTime = nextMsg.timestampMs - currentMsg.timestampMs;
         }
+        // If same speaker continues, responseTime remains null
       }
       
       // Group related messages (A → B → A pattern)
@@ -242,8 +244,8 @@ const TimelineVisualization = ({ transcript, maxHeight = 400 }) => {
 
   // Get speaker name
   const getSpeakerName = (speaker) => {
-    if (speaker === 'user') return 'Testing Agent';
-    if (speaker === 'agent') return 'Phoneline Agent';
+    if (speaker === 'user') return 'Phoneline Agent (Restaurant AI)';
+    if (speaker === 'agent') return 'Testing Agent (OpenAI)';
     return 'System';
   };
 
@@ -331,7 +333,7 @@ const TimelineVisualization = ({ transcript, maxHeight = 400 }) => {
           <div className="bg-white p-3 rounded-md border border-secondary-200">
             <div className="flex items-center mb-2">
               <UserCircleIcon className="h-5 w-5 text-secondary-600 mr-2" />
-              <h4 className="font-medium">Testing Agent</h4>
+              <h4 className="font-medium">Phoneline Agent (Restaurant AI)</h4>
             </div>
             <div className="text-sm">
               <div className="flex justify-between mb-1">
@@ -357,7 +359,7 @@ const TimelineVisualization = ({ transcript, maxHeight = 400 }) => {
           <div className="bg-white p-3 rounded-md border border-secondary-200">
             <div className="flex items-center mb-2">
               <ChatBubbleLeftRightIcon className="h-5 w-5 text-primary-600 mr-2" />
-              <h4 className="font-medium">Phoneline Agent</h4>
+              <h4 className="font-medium">Testing Agent (OpenAI)</h4>
             </div>
             <div className="text-sm">
               <div className="flex justify-between mb-1">
@@ -434,14 +436,14 @@ const TimelineVisualization = ({ transcript, maxHeight = 400 }) => {
                 </div>
                 
                 {/* Response time indicator dot */}
-                {message.responseTime && (
+                {message.responseTime && message.respondingAgent && message.respondingAgent !== message.speaker && (
                   <div className={`absolute -right-1 -top-1 w-3 h-3 rounded-full ${getResponseTimeColor(message.responseSpeed)} border border-white`} 
                        title={`Response time: ${formatDuration(message.responseTime)}`}></div>
                 )}
               </div>
               
               {/* Response time visualization - arrow with time */}
-              {message.responseTime && (
+              {message.responseTime && message.respondingAgent && message.respondingAgent !== message.speaker && (
                 <div className="absolute -left-6 top-6 bottom-0 flex flex-col items-center text-xs"
                      style={{ height: message.responseSpeed === 'slow' ? '80px' : message.responseSpeed === 'medium' ? '50px' : '30px' }}>
                   <div className={`h-full w-0.5 ${getResponseTimeColor(message.responseSpeed)}`}></div>

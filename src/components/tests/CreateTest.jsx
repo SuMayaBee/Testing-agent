@@ -70,6 +70,14 @@ function CreateTest() {
   // Add restaurant data functions
   const RESTAURANT_API_BASE_URL = 'https://phoneline-dashboard-backend-63qdm.ondigitalocean.app/api';
   
+  // Add new state for manual item entry
+  const [manualItemMode, setManualItemMode] = useState(false);
+  const [manualItem, setManualItem] = useState({
+    name: '',
+    customizations: '',
+    instructions: ''
+  });
+  
   // Add function to process restaurant data
   function processRestaurantData(restaurantData) {
     // Extract categories
@@ -298,6 +306,37 @@ function CreateTest() {
     setMenuItemDetails(null);
     setSelectedCustomizations({});
     setCurrentItemInstructions('');
+  };
+
+  // Add function to handle manual item entry
+  const addManualItemToOrder = () => {
+    if (!manualItem.name.trim()) return;
+
+    const newItem = {
+      name: manualItem.name.trim(),
+      customizations: manualItem.customizations.trim(),
+      instructions: manualItem.instructions.trim()
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      orderItems: [...prev.orderItems, newItem]
+    }));
+
+    // Reset manual item inputs
+    setManualItem({
+      name: '',
+      customizations: '',
+      instructions: ''
+    });
+  };
+
+  // Handle manual item input changes
+  const handleManualItemChange = (field, value) => {
+    setManualItem(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
   
   // Add function to remove item from order
@@ -1237,30 +1276,63 @@ Never confirm the order until every add-on price has been clearly stated.`;
           <div className="mb-6">
             <h3 className="font-medium mb-3">Order Items Configuration</h3>
             <div className="border border-secondary-200 rounded-md p-4">
-              {/* Restaurant Phone Number Input */}
+              
+              {/* Mode Toggle */}
               <div className="mb-4">
-                <label className="block mb-1">Restaurant Phone Number</label>
-                <div className="flex space-x-2">
-                  <input
-                    type="tel"
-                    value={restaurantPhoneNumber}
-                    onChange={(e) => setRestaurantPhoneNumber(e.target.value)}
-                    className="form-control flex-1"
-                    placeholder="Enter restaurant phone number"
-                  />
-                  <button
-                    type="button"
-                    onClick={getRestaurantData}
-                    disabled={loadingRestaurantData || !restaurantPhoneNumber.trim()}
-                    className="btn btn-secondary"
-                  >
-                    {loadingRestaurantData ? 'Loading...' : 'Get Menu'}
-                  </button>
+                <div className="flex items-center space-x-4 mb-3">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      checked={!manualItemMode}
+                      onChange={() => setManualItemMode(false)}
+                      className="mr-2"
+                    />
+                    <span>Use Restaurant Menu</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      checked={manualItemMode}
+                      onChange={() => setManualItemMode(true)}
+                      className="mr-2"
+                    />
+                    <span>Add Items Manually</span>
+                  </label>
                 </div>
-                <p className="text-xs text-secondary-600 mt-1">
-                  Hint: Last digit determines restaurant type - 0-3: Indian, 4-6: Italian, 7-9: Chinese
+                <p className="text-sm text-secondary-600">
+                  {manualItemMode 
+                    ? "Manually enter item names and customizations without fetching restaurant data."
+                    : "Fetch restaurant menu data to select items with accurate customizations and pricing."
+                  }
                 </p>
               </div>
+
+              {/* Restaurant Phone Number Input - only show in restaurant menu mode */}
+              {!manualItemMode && (
+                <div className="mb-4">
+                  <label className="block mb-1">Restaurant Phone Number</label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="tel"
+                      value={restaurantPhoneNumber}
+                      onChange={(e) => setRestaurantPhoneNumber(e.target.value)}
+                      className="form-control flex-1"
+                      placeholder="Enter restaurant phone number"
+                    />
+                    <button
+                      type="button"
+                      onClick={getRestaurantData}
+                      disabled={loadingRestaurantData || !restaurantPhoneNumber.trim()}
+                      className="btn btn-secondary"
+                    >
+                      {loadingRestaurantData ? 'Loading...' : 'Get Menu'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-secondary-600 mt-1">
+                    Hint: Last digit determines restaurant type - 0-3: Indian, 4-6: Italian, 7-9: Chinese
+                  </p>
+                </div>
+              )}
 
               {/* Loading State */}
               {loadingRestaurantData && (
@@ -1269,8 +1341,8 @@ Never confirm the order until every add-on price has been clearly stated.`;
                 </div>
               )}
 
-              {/* Restaurant Info */}
-              {restaurantData && (
+              {/* Restaurant Info - only show in restaurant menu mode */}
+              {!manualItemMode && restaurantData && (
                 <div className="mb-4 p-3 bg-white rounded border">
                   <h4 className="font-medium">{restaurantData.restaurant_name}</h4>
                   <p className="text-sm">{restaurantData.restaurant_address}</p>
@@ -1315,73 +1387,128 @@ Never confirm the order until every add-on price has been clearly stated.`;
 
               {/* Add new item section */}
               <div className="bg-white p-3 rounded border">
-                <h4 className="font-medium mb-2">Add Menu Item</h4>
-                
-                {/* Menu Item Selection */}
-                <div className="mb-3">
-                  <label className="block mb-1">Select Menu Item</label>
-                  <select 
-                    value={selectedMenuItem}
-                    onChange={(e) => handleMenuItemSelect(e.target.value)}
-                    className="form-control w-full"
-                  >
-                    <option value="">-- Select an item --</option>
-                    {restaurantData?.item_list?.map((item, index) => (
-                      <option key={index} value={item[0]}>
-                        {item[0]} - ${item[1].toFixed(2)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {manualItemMode ? (
+                  // Manual Item Entry Form
+                  <>
+                    <h4 className="font-medium mb-2">Add Item Manually</h4>
+                    
+                    <div className="mb-3">
+                      <label className="block mb-1">Item Name <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={manualItem.name}
+                        onChange={(e) => handleManualItemChange('name', e.target.value)}
+                        className="form-control w-full"
+                        placeholder="e.g., Margherita Pizza, Chicken Tikka Masala, etc."
+                      />
+                    </div>
 
-                {/* Customizations */}
-                {menuItemDetails?.customizations && menuItemDetails.customizations.length > 0 && (
-                  <div className="mb-3">
-                    <h5 className="font-medium mb-2">Customizations</h5>
-                    {menuItemDetails.customizations.map((customization, index) => (
-                      <div key={index} className="mb-2">
-                        <label className="block mb-1">
-                          {customization.name} {customization.required && <span className="text-red-500">*</span>}
-                        </label>
-                        <select
-                          value={selectedCustomizations[customization.name] || ''}
-                          onChange={(e) => handleCustomizationChange(customization.name, e.target.value)}
-                          className="form-control w-full"
-                          required={customization.required}
-                        >
-                          <option value="">-- Select an option --</option>
-                          {customization.options.map((option, optIndex) => (
-                            <option key={optIndex} value={option[0]}>
-                              {option[0]} {option.length > 1 ? `(+$${option[1].toFixed(2)})` : ''}
-                            </option>
-                          ))}
-                        </select>
+                    <div className="mb-3">
+                      <label className="block mb-1">Customizations</label>
+                      <textarea
+                        value={manualItem.customizations}
+                        onChange={(e) => handleManualItemChange('customizations', e.target.value)}
+                        className="form-control w-full"
+                        rows="2"
+                        placeholder="e.g., Extra cheese, Medium spice level, No onions, etc."
+                      />
+                      <p className="text-xs text-secondary-600 mt-1">
+                        Enter any customizations or modifications for this item
+                      </p>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="block mb-1">Special Instructions</label>
+                      <textarea
+                        value={manualItem.instructions}
+                        onChange={(e) => handleManualItemChange('instructions', e.target.value)}
+                        className="form-control w-full"
+                        rows="2"
+                        placeholder="e.g., Please make it extra crispy, Cut into 8 slices, etc."
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={addManualItemToOrder}
+                      disabled={!manualItem.name.trim()}
+                      className="btn btn-secondary w-full"
+                    >
+                      Add Item to Order
+                    </button>
+                  </>
+                ) : (
+                  // Restaurant Menu Item Selection (existing code)
+                  <>
+                    <h4 className="font-medium mb-2">Add Menu Item</h4>
+                    
+                    {/* Menu Item Selection */}
+                    <div className="mb-3">
+                      <label className="block mb-1">Select Menu Item</label>
+                      <select 
+                        value={selectedMenuItem}
+                        onChange={(e) => handleMenuItemSelect(e.target.value)}
+                        className="form-control w-full"
+                      >
+                        <option value="">-- Select an item --</option>
+                        {restaurantData?.item_list?.map((item, index) => (
+                          <option key={index} value={item[0]}>
+                            {item[0]} - ${item[1].toFixed(2)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Customizations */}
+                    {menuItemDetails?.customizations && menuItemDetails.customizations.length > 0 && (
+                      <div className="mb-3">
+                        <h5 className="font-medium mb-2">Customizations</h5>
+                        {menuItemDetails.customizations.map((customization, index) => (
+                          <div key={index} className="mb-2">
+                            <label className="block mb-1">
+                              {customization.name} {customization.required && <span className="text-red-500">*</span>}
+                            </label>
+                            <select
+                              value={selectedCustomizations[customization.name] || ''}
+                              onChange={(e) => handleCustomizationChange(customization.name, e.target.value)}
+                              className="form-control w-full"
+                              required={customization.required}
+                            >
+                              <option value="">-- Select an option --</option>
+                              {customization.options.map((option, optIndex) => (
+                                <option key={optIndex} value={option[0]}>
+                                  {option[0]} {option.length > 1 ? `(+$${option[1].toFixed(2)})` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
+
+                    {/* Item Instructions */}
+                    <div className="mb-3">
+                      <label className="block mb-1">Item Instructions</label>
+                      <textarea
+                        value={currentItemInstructions}
+                        onChange={(e) => setCurrentItemInstructions(e.target.value)}
+                        className="form-control w-full"
+                        rows="2"
+                        placeholder="Special instructions for this item..."
+                      />
+                    </div>
+
+                    {/* Add Item Button */}
+                    <button
+                      type="button"
+                      onClick={addItemToOrder}
+                      disabled={!selectedMenuItem}
+                      className="btn btn-secondary w-full"
+                    >
+                      Add Item to Order
+                    </button>
+                  </>
                 )}
-
-                {/* Item Instructions */}
-                <div className="mb-3">
-                  <label className="block mb-1">Item Instructions</label>
-                  <textarea
-                    value={currentItemInstructions}
-                    onChange={(e) => setCurrentItemInstructions(e.target.value)}
-                    className="form-control w-full"
-                    rows="2"
-                    placeholder="Special instructions for this item..."
-                  />
-                </div>
-
-                {/* Add Item Button */}
-                <button
-                  type="button"
-                  onClick={addItemToOrder}
-                  disabled={!selectedMenuItem}
-                  className="btn btn-secondary w-full"
-                >
-                  Add Item to Order
-                </button>
               </div>
             </div>
           </div>

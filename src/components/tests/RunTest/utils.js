@@ -1,5 +1,8 @@
 import { voiceAgentAPI, callAnalyticsAPI } from '../../../lib/api';
 import { normalizeScore, STATUSES } from './constants';
+import { firebaseTranscriptService } from './firebaseTranscriptService';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../lib/firebase-config';
 
 // Helper function to format metrics for display
 export function formatMetricsForDisplay(transcriptResult, testMetrics) {
@@ -101,6 +104,72 @@ export async function fetchCallRecording(callSid) {
     return null;
   } catch (err) {
     console.error('Error fetching call recording:', err);
+    return null;
+  }
+}
+
+// Direct Firebase metrics fetching function
+export async function fetchMetricsFromFirebase(currentOrganizationUsername, testId) {
+  if (!currentOrganizationUsername || !testId) {
+    console.log("❌ Missing organization or test ID for metrics fetch");
+    return null;
+  }
+
+  try {
+    console.log("🔍 Fetching metrics directly from Firebase...");
+    console.log(`📁 Path: organizations/${currentOrganizationUsername}/tests/${testId}/conversations/current`);
+    
+    // Get the conversation document directly from Firebase
+    const conversationPath = `organizations/${currentOrganizationUsername}/tests/${testId}/conversations/current`;
+    const docRef = doc(db, conversationPath);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      console.log("❌ No conversation document found");
+      return null;
+    }
+    
+    const conversationData = docSnap.data();
+    console.log("📊 Conversation data keys:", Object.keys(conversationData));
+    
+    // Check for metrics_results
+    const metricsResults = conversationData.metrics_results;
+    const overallScore = conversationData.overall_score;
+    const evalMetadata = conversationData.eval_metadata;
+    
+    console.log("🎯 Metrics results found:", !!metricsResults);
+    console.log("🎯 Overall score found:", overallScore);
+    console.log("🎯 Eval metadata found:", !!evalMetadata);
+    
+    if (metricsResults && typeof metricsResults === 'object') {
+      console.log("✅ Found metrics results with", Object.keys(metricsResults).length, "metrics");
+      
+      // Convert Firebase metrics format to frontend format
+      const formattedMetrics = Object.entries(metricsResults).map(([metricId, metricData]) => ({
+        metric_id: metricId,
+        metric_name: metricData.metric_name || 'Unknown Metric',
+        score: metricData.score || 0,
+        details: metricData.details?.explanation || 'No explanation available',
+        improvement_areas: metricData.improvement_areas || []
+      }));
+      
+      console.log("📊 Formatted metrics:", formattedMetrics.map(m => ({
+        name: m.metric_name,
+        score: m.score
+      })));
+      
+      return {
+        metrics: formattedMetrics,
+        overallScore,
+        evalMetadata
+      };
+    } else {
+      console.log("❌ No valid metrics_results found in conversation");
+      return null;
+    }
+    
+  } catch (error) {
+    console.error("❌ Error fetching metrics from Firebase:", error);
     return null;
   }
 }
@@ -258,6 +327,21 @@ export function setupTranscriptPolling({
             setSimulationStatus(STATUSES.COMPLETED);
             setSavedSimulationId(null);
             
+            // Finalize conversation in Firebase with metrics and score (immediate case)
+            try {
+              await firebaseTranscriptService.finalizeConversation(
+                formattedMetrics,
+                normalizeScore(transcriptResult.overall_score),
+                {
+                  message_count: transcriptResult.transcript?.length || 0,
+                  eval_metadata: transcriptResult.eval_metadata
+                }
+              );
+              console.log("✅ Conversation finalized in Firebase with immediate metrics");
+            } catch (firebaseError) {
+              console.error("❌ Failed to finalize conversation in Firebase (immediate):", firebaseError);
+            }
+            
             return; // Stop polling since we have complete data
           }
           
@@ -274,6 +358,73 @@ export function setupTranscriptPolling({
                 
               console.log(`📊 Using persistent transcript (${currentTranscriptSnapshot.length} messages) for metrics check`);
               
+              // Try to fetch metrics directly from Firebase first
+              console.log("🔥 Attempting direct Firebase metrics fetch...");
+              const firebaseMetrics = await fetchMetricsFromFirebase(currentOrganizationUsername, testId);
+              
+              if (firebaseMetrics && firebaseMetrics.metrics && firebaseMetrics.metrics.length > 0) {
+                console.log(`✅ Found metrics in Firebase! ${firebaseMetrics.metrics.length} metrics available`);
+                console.log("Individual metric scores:", firebaseMetrics.metrics.map(m => ({ name: m.metric_name, score: m.score })));
+                console.log("Firebase overall score:", firebaseMetrics.overallScore);
+                
+                // Use the current transcript snapshot
+                const bestTranscript = currentTranscriptSnapshot;
+                
+                // Store the eval_metadata in the transcript if it exists
+                if (firebaseMetrics.evalMetadata) {
+                  // Make sure we have at least one transcript entry
+                  const baseTranscript = bestTranscript.length > 0 ? bestTranscript : [{
+                    speaker: 'system',
+                    text: 'Call completed',
+                    timestamp: new Date()
+                  }];
+                  
+                  const updatedTranscript = [...baseTranscript];
+                  updatedTranscript[0] = {
+                    ...updatedTranscript[0],
+                    eval_metadata: firebaseMetrics.evalMetadata
+                  };
+                  
+                  setTranscript(updatedTranscript);
+                  persistentTranscriptRef.current = updatedTranscript;
+                } else {
+                  // If no metadata, just make sure we're using the best transcript
+                  setTranscript(bestTranscript);
+                  persistentTranscriptRef.current = bestTranscript;
+                }
+                
+                // Update state with metrics from Firebase
+                setMetricsResults(firebaseMetrics.metrics);
+                setOverallScore(normalizeScore(firebaseMetrics.overallScore));
+                setSimulationStatus(STATUSES.COMPLETED);
+                setSavedSimulationId(null);
+                
+                // Finalize conversation in Firebase with metrics and score
+                try {
+                  // First ensure the complete transcript is saved
+                  await firebaseTranscriptService.ensureTranscriptSaved(bestTranscript);
+                  console.log("✅ Ensured complete transcript is saved to Firebase");
+                  
+                  // Then finalize with metrics and score
+                  await firebaseTranscriptService.finalizeConversation(
+                    firebaseMetrics.metrics,
+                    normalizeScore(firebaseMetrics.overallScore),
+                    {
+                      message_count: bestTranscript.length,
+                      eval_metadata: firebaseMetrics.evalMetadata,
+                      transcript_source: 'direct_firebase_fetch'
+                    }
+                  );
+                  console.log("✅ Conversation finalized in Firebase with metrics and complete transcript");
+                } catch (firebaseError) {
+                  console.error("❌ Failed to finalize conversation in Firebase:", firebaseError);
+                }
+                
+                return true; // Success
+              }
+              
+              // If Firebase doesn't have metrics yet, fall back to API polling
+              console.log("⚠️ No metrics in Firebase yet, trying API polling...");
               const finalResult = await voiceAgentAPI.getTranscript(
                 currentOrganizationUsername,
                 testId,
@@ -299,7 +450,7 @@ export function setupTranscriptPolling({
                 // Format metrics for display
                 const formattedMetrics = formatMetricsForDisplay(finalResult, testMetrics);
                 
-                console.log(`✅ Final metrics results received on attempt ${4-attemptsLeft}:`, formattedMetrics);
+                console.log(`✅ Final metrics results received from API on attempt ${4-attemptsLeft}:`, formattedMetrics);
                 console.log("Individual metric scores:", formattedMetrics.map(m => ({ name: m.metric_name, score: m.score })));
                 console.log("Final overall score:", finalResult.overall_score);
                 
@@ -335,9 +486,31 @@ export function setupTranscriptPolling({
                 setOverallScore(normalizeScore(finalResult.overall_score));
                 setSimulationStatus(STATUSES.COMPLETED);
                 setSavedSimulationId(null);
+                
+                // Finalize conversation in Firebase with metrics and score
+                try {
+                  // First ensure the complete transcript is saved
+                  await firebaseTranscriptService.ensureTranscriptSaved(bestTranscript);
+                  console.log("✅ Ensured complete transcript is saved to Firebase");
+                  
+                  // Then finalize with metrics and score
+                  await firebaseTranscriptService.finalizeConversation(
+                    formattedMetrics,
+                    normalizeScore(finalResult.overall_score),
+                    {
+                      message_count: bestTranscript.length,
+                      eval_metadata: finalResult.eval_metadata,
+                      transcript_source: 'phoneline_analytics_with_metrics'
+                    }
+                  );
+                  console.log("✅ Conversation finalized in Firebase with metrics and complete transcript");
+                } catch (firebaseError) {
+                  console.error("❌ Failed to finalize conversation in Firebase:", firebaseError);
+                }
+                
                 return true; // Success
               } else {
-                console.log(`⚠️ No metrics results available yet (attempt ${4-attemptsLeft})`);
+                console.log(`⚠️ No metrics results available yet from API (attempt ${4-attemptsLeft})`);
                 
                 // Always make sure we're displaying something
                 if (currentTranscriptSnapshot.length > 0) {

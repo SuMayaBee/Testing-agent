@@ -1,4 +1,6 @@
 import { fetchAPI } from './core';
+import { db } from '../firebase-config';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 
 // Voice Agent API functions
 export const voiceAgentAPI = {
@@ -81,13 +83,59 @@ export const voiceAgentAPI = {
 
   // Cancel an active test call
   cancelCall: (organizationId, testId, callSid = null) => {
-    let endpoint = `/voice-agent/cancel-call/${testId}?organization_id=${organizationId}`;
+    let endpoint = `/voice-agent/direct-end-call/${testId}?organization_id=${organizationId}`;
     if (callSid) {
       endpoint += `&call_sid=${callSid}`;
     }
+    // Add a reason parameter to indicate this is a manual cancellation
+    endpoint += `&reason=Manual cancellation by user`;
 
     return fetchAPI(endpoint, {
       method: "POST",
     });
+  },
+
+  // Firebase-based conversation methods
+  
+  // Get current conversation from Firebase
+  getCurrentConversation: async (organizationId, testId) => {
+    try {
+      const conversationPath = `organizations/${organizationId}/tests/${testId}/conversations/current`;
+      const docRef = doc(db, conversationPath);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return { success: true, data: docSnap.data() };
+      } else {
+        return { success: false, error: 'No current conversation found' };
+      }
+    } catch (error) {
+      console.error('Error fetching current conversation:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Subscribe to real-time current conversation updates
+  subscribeToCurrentConversation: (organizationId, testId, callback) => {
+    try {
+      const conversationPath = `organizations/${organizationId}/tests/${testId}/conversations/current`;
+      const docRef = doc(db, conversationPath);
+      
+      const unsubscribe = onSnapshot(docRef, (doc) => {
+        if (doc.exists()) {
+          callback({ success: true, data: doc.data() });
+        } else {
+          callback({ success: false, error: 'No current conversation found' });
+        }
+      }, (error) => {
+        console.error('Error in conversation subscription:', error);
+        callback({ success: false, error: error.message });
+      });
+      
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up conversation subscription:', error);
+      return null;
+    }
   },
 }; 

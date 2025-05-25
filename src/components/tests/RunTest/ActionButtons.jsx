@@ -4,7 +4,8 @@ import {
   StopCircleIcon, 
   ArrowLeftIcon, 
   ChartBarIcon, 
-  PhoneIcon 
+  PhoneIcon,
+  CloudArrowDownIcon
 } from '@heroicons/react/24/outline';
 import { STATUSES } from './constants';
 
@@ -23,7 +24,7 @@ export function RunningActionButtons({ handleCancelTest, cancelling }) {
   );
 }
 
-export function CompletedActionButtons({ testId, handleRunTest }) {
+export function CompletedActionButtons({ testId, handleRunTest, handleFetchMetricsFromFirebase, fetchingMetrics }) {
   return (
     <div className="mt-6 flex justify-between">
       <div>
@@ -37,11 +38,22 @@ export function CompletedActionButtons({ testId, handleRunTest }) {
         
         <Link
           to={`/tests/${testId}/compare`}
-          className="btn btn-primary inline-flex items-center"
+          className="btn btn-primary inline-flex items-center mr-2"
         >
           <ChartBarIcon className="w-5 h-5 mr-1" />
           Compare Results
         </Link>
+        
+        {handleFetchMetricsFromFirebase && (
+          <button
+            onClick={handleFetchMetricsFromFirebase}
+            className="btn btn-outline inline-flex items-center mr-2"
+            disabled={fetchingMetrics}
+          >
+            <CloudArrowDownIcon className="w-5 h-5 mr-1" />
+            {fetchingMetrics ? 'Fetching...' : 'Fetch Metrics'}
+          </button>
+        )}
       </div>
       
       <button
