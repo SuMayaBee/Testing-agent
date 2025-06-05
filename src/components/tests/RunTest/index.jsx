@@ -27,7 +27,7 @@ import {
 } from './api';
 import { setupTranscriptPolling, formatMetricsForDisplay } from './utils';
 import { normalizeScore } from './constants';
-import { realtimeMonitor } from './realtimeMonitor';
+// import { realtimeMonitor } from './realtimeMonitor';
 import { firebaseTranscriptService } from './firebaseTranscriptService';
 
 function RunTest() {
@@ -115,10 +115,10 @@ function RunTest() {
       }
       
       // Stop real-time monitoring when component unmounts
-      if (realtimeMonitor.isMonitoring()) {
-        console.log("Stopping real-time monitoring on component unmount");
-        realtimeMonitor.stopMonitoring();
-      }
+      // if (realtimeMonitor.isMonitoring()) {
+      //   console.log("Stopping real-time monitoring on component unmount");
+      //   realtimeMonitor.stopMonitoring();
+      // }
       
       // Reset Firebase transcript service
       firebaseTranscriptService.reset();
@@ -375,15 +375,15 @@ function RunTest() {
         };
         
         // Start the real-time monitoring
-        try {
-          await realtimeMonitor.startMonitoring(callerNumbers, recipientNumbers, monitoringCallbacks);
-          console.log("✅ Real-time monitoring started successfully");
-        } catch (monitoringError) {
-          console.error("❌ Failed to start real-time monitoring:", monitoringError);
-          setError(`Warning: Real-time monitoring failed to start: ${monitoringError.message}`);
-          setRealtimeMonitoring(false);
-          // Continue with the test even if monitoring fails
-        }
+        // try {
+        //   await realtimeMonitor.startMonitoring(callerNumbers, recipientNumbers, monitoringCallbacks);
+        //   console.log("✅ Real-time monitoring started successfully");
+        // } catch (monitoringError) {
+        //   console.error("❌ Failed to start real-time monitoring:", monitoringError);
+        //   setError(`Warning: Real-time monitoring failed to start: ${monitoringError.message}`);
+        //   setRealtimeMonitoring(false);
+        //   // Continue with the test even if monitoring fails
+        // }
         
         // Set the first task to running
         if (tasksInFlow.length > 0) {
