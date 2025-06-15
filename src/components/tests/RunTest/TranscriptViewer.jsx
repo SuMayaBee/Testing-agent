@@ -329,12 +329,12 @@ function TranscriptViewer({ transcript, realtimeMonitoring }) {
 
     return (
       <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex items-center mb-4">
+        {/* <div className="flex items-center mb-4">
           <TimeIcon className="h-5 w-5 text-gray-600 mr-2" />
           <h4 className="font-semibold text-gray-900">Response Time Timeline</h4>
-        </div>
+        </div> */}
         
-        <div className="space-y-3 max-h-64 overflow-y-auto">
+        {/* <div className="space-y-3 max-h-64 overflow-y-auto">
           {delays.slice(-10).map((delay, index) => (
             <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
               <div className="flex-shrink-0">
@@ -368,7 +368,7 @@ function TranscriptViewer({ transcript, realtimeMonitoring }) {
               </div>
             </div>
           ))}
-        </div>
+        </div> */}
       </div>
     );
   };
@@ -674,7 +674,7 @@ function TranscriptViewer({ transcript, realtimeMonitoring }) {
       {/* Response Time Analysis Cards */}
       {processedTranscript.length > 0 && (
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200 shadow-sm">
+          {/* <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200 shadow-sm">
             <div className="flex items-center mb-3">
               <div className="bg-blue-500 rounded-full p-2 mr-3">
                 <ComputerDesktopIcon className="h-5 w-5 text-white" />
@@ -695,8 +695,8 @@ function TranscriptViewer({ transcript, realtimeMonitoring }) {
                 <span>{responseMetrics.testingCount}</span>
               </div>
             </div>
-          </div>
-
+          </div> */}
+{/* 
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200 shadow-sm">
             <div className="flex items-center mb-3">
               <div className="bg-purple-500 rounded-full p-2 mr-3">
@@ -718,7 +718,7 @@ function TranscriptViewer({ transcript, realtimeMonitoring }) {
                 <span>{responseMetrics.phonelineCount}</span>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       )}
 

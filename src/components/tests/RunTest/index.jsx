@@ -76,6 +76,9 @@ function RunTest() {
   const [realtimeMonitoring, setRealtimeMonitoring] = useState(false);
   const [monitoredCalls, setMonitoredCalls] = useState([]);
   
+  // Add Firebase real-time subscription state
+  const [firebaseSubscription, setFirebaseSubscription] = useState(null);
+  
   // Fetch test details and associated tasks/metrics
   useEffect(() => {
     async function loadTestData() {
@@ -107,6 +110,13 @@ function RunTest() {
   // When component unmounts, auto-save the conversation if it's completed and not already saved
   useEffect(() => {
     return () => {
+      // Cleanup Firebase subscription
+      if (firebaseSubscription && typeof firebaseSubscription === 'function') {
+        console.log("🔥 Cleaning up Firebase real-time subscription");
+        firebaseSubscription();
+        setFirebaseSubscription(null);
+      }
+      
       // If a test was running and completed, but not archived yet, do it automatically
       if (simulationStatus === STATUSES.COMPLETED && !savedSimulationId && !archived) {
         console.log("Auto-saving conversation on component unmount");
@@ -123,7 +133,7 @@ function RunTest() {
       // Reset Firebase transcript service
       firebaseTranscriptService.reset();
     };
-  }, [simulationStatus, savedSimulationId, archived]);
+  }, [simulationStatus, savedSimulationId, archived, firebaseSubscription]);
   
   // When transcript updates, also update our persistent ref
   useEffect(() => {
@@ -206,6 +216,74 @@ function RunTest() {
             result.call_sid
           );
           console.log("✅ Firebase transcript service initialized");
+          
+          // Set up Firebase real-time listener to ensure we don't miss any updates
+          console.log("🔥 Setting up Firebase real-time listener...");
+          const unsubscribe = voiceAgentAPI.subscribeToCurrentConversation(
+            currentOrganizationUsername,
+            testId,
+            (response) => {
+              if (response.success && response.data) {
+                const conversationData = response.data;
+                console.log(`🔥 Firebase real-time update: ${conversationData.messages?.length || 0} messages`);
+                
+                // Update transcript if we have messages
+                if (conversationData.messages && conversationData.messages.length > 0) {
+                  // Convert Firebase messages to transcript format
+                  const firebaseTranscript = conversationData.messages
+                    .filter(msg => msg.agent !== 'system') // Filter out system messages
+                    .map(msg => ({
+                      speaker: msg.agent === 'TestAgent' ? 'user' : 'agent',
+                      text: msg.message || '',
+                      timestamp: msg.timestamp,
+                      start_time: msg.start_time,
+                      end_time: msg.end_time,
+                      agent: msg.agent,
+                      session_id: msg.session_id
+                    }));
+                  
+                  // Only update if we have more messages than current transcript
+                  if (firebaseTranscript.length > transcript.length) {
+                    console.log(`🔥 Updating transcript from Firebase: ${firebaseTranscript.length} messages (was ${transcript.length})`);
+                    setTranscript(firebaseTranscript);
+                    persistentTranscriptRef.current = firebaseTranscript;
+                  }
+                }
+                
+                // Check for metrics results
+                if (conversationData.metrics_results && Object.keys(conversationData.metrics_results).length > 0) {
+                  console.log("🔥 Firebase metrics update:", conversationData.metrics_results);
+                  
+                  // Format metrics for display
+                  const formattedMetrics = Object.entries(conversationData.metrics_results).map(([metricId, metricData]) => ({
+                    metric_id: metricId,
+                    metric_name: metricData.metric_name || 'Unknown Metric',
+                    score: metricData.score || 0,
+                    details: metricData.details?.explanation || 'No explanation available',
+                    improvement_areas: metricData.improvement_areas || []
+                  }));
+                  
+                  setMetricsResults(formattedMetrics);
+                  
+                  if (conversationData.overall_score !== undefined) {
+                    setOverallScore(conversationData.overall_score);
+                  }
+                  
+                  // If we have metrics, the test is likely completed
+                  if (conversationData.call_status === 'completed') {
+                    setSimulationStatus(STATUSES.COMPLETED);
+                    setRealtimeMonitoring(false);
+                  }
+                }
+              } else {
+                console.log("🔥 Firebase listener: No data or error:", response.error);
+              }
+            }
+          );
+          
+          // Store the unsubscribe function
+          setFirebaseSubscription(() => unsubscribe);
+          console.log("✅ Firebase real-time listener set up successfully");
           
           // Save initial transcript entry to Firebase
           const initialFirebaseMessage = {
@@ -538,103 +616,38 @@ function RunTest() {
   
   // Handle call cancellation
   const handleCancelTest = async () => {
-    if (!simulationId || !currentOrganizationUsername || !testId) {
-      console.error("Missing required data for cancellation");
+    if (!simulationId && !callSid) {
+      setError('No active test to cancel');
       return;
     }
     
+    setCancelling(true);
+    setError(null);
+    
     try {
-      setCancelling(true);
-      setError(null);
-      
-      console.log(`🛑 Cancelling test ${testId} with call SID: ${callSid}`);
-      
-      // Call the backend API to cancel the call, passing the call_sid if available
-      const result = await cancelTest(currentOrganizationUsername, testId, callSid);
-      
-      console.log("📞 Call cancellation result:", result);
-      
-      if (result.status === "success" || result.status === "warning") {
-        // Stop real-time monitoring if it's running
-        if (realtimeMonitor.isMonitoring()) {
-          console.log("🛑 Stopping real-time monitoring due to test cancellation");
-          
-          // Mark the specific call as cancelled if we have a call_sid
-          if (callSid) {
-            realtimeMonitor.markCallAsCancelled(callSid);
-          }
-          
-          realtimeMonitor.stopMonitoring();
-          setRealtimeMonitoring(false);
-          setMonitoredCalls([]);
-        }
-        
-        // Update Firebase with cancelled status
-        firebaseTranscriptService.updateCallStatus('cancelled')
-          .then(() => {
-            console.log("✅ Updated Firebase with cancelled status");
-            
-            // Ensure transcript is saved to Firebase before cancelling
-            const currentTranscript = persistentTranscriptRef.current.length > 0 ? 
-              persistentTranscriptRef.current : transcript;
-            if (currentTranscript.length > 0) {
-              return firebaseTranscriptService.ensureTranscriptSaved(currentTranscript);
-            }
-          })
-          .then(() => {
-            console.log("✅ Ensured cancelled call transcript is saved to Firebase");
-          })
-          .catch((firebaseError) => {
-            console.error("❌ Failed to update cancelled status in Firebase:", firebaseError);
-          });
-        
-        // Add a system message to the transcript
-        const cancellationMessage = {
-          speaker: 'system',
-          text: 'Call was cancelled by user.',
-          timestamp: new Date()
-        };
-        
-        const updatedTranscript = [...transcript, cancellationMessage];
-        setTranscript(updatedTranscript);
-        persistentTranscriptRef.current = updatedTranscript;
-        
-        // Save cancellation message to Firebase
-        firebaseTranscriptService.addMessage({
-          agent: 'system',
-          message: 'Call was cancelled by user.',
-          session_id: callSid
-        })
-          .then(() => {
-            console.log("✅ Added cancellation message to Firebase");
-          })
-          .catch((firebaseError) => {
-            console.error("❌ Failed to add cancellation message to Firebase:", firebaseError);
-          });
-        
-        // Update the simulation status
-        setSimulationStatus(STATUSES.COMPLETED);
-        
-        // Mark all tasks as failed/cancelled
-        setTasksInFlow(prev => prev.map(task => ({ ...task, status: STATUSES.FAILED })));
-        
-        // Don't auto-save the cancelled test to avoid it appearing in simulations
-        setArchived(true); // Mark as archived so it doesn't get auto-saved on unmount
-        setSavedSimulationId('cancelled'); // Mark with a special ID to prevent further save attempts
-        
-        console.log("✅ Test cancellation completed successfully");
-      } else {
-        // Show error
-        const errorMessage = result.message || "Failed to cancel call";
-        console.error("❌ Call cancellation failed:", errorMessage);
-        setError(errorMessage);
+      // Cleanup Firebase subscription before cancelling
+      if (firebaseSubscription && typeof firebaseSubscription === 'function') {
+        console.log("🔥 Cleaning up Firebase subscription before cancelling");
+        firebaseSubscription();
+        setFirebaseSubscription(null);
       }
+      
+      await cancelTest(
+        currentOrganizationUsername,
+        testId,
+        callSid,
+        setSimulationStatus,
+        setRunning,
+        setRealtimeMonitoring
+      );
+      
+      // Clear call SID after successful cancellation
+      setCallSid(null);
     } catch (err) {
-      console.error('❌ Error cancelling test:', err);
+      console.error('Error cancelling test:', err);
       setError(err.message || 'Failed to cancel test');
     } finally {
       setCancelling(false);
-      setRunning(false);
     }
   };
   
