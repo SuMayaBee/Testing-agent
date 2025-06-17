@@ -67,6 +67,15 @@ export const voiceAgentAPI = {
     );
   },
 
+  // Get audio transcription results
+  getAudioTranscription: (organizationId, testId) => {
+    return fetchAPI(
+      `/voice-agent/get-audio-transcription/${testId}?organization_id=${organizationId}`,
+      {},
+      false // Disable caching for fresh data
+    );
+  },
+
   // Get all archived conversations for an organization
   getAllArchivedConversations: (organizationId) => {
     return fetchAPI(

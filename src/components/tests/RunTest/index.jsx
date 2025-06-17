@@ -15,6 +15,7 @@ import TestExecutionHeader from './TestExecutionHeader';
 import TestExecutionInfo from './TestExecutionInfo';
 import { RunningActionButtons, CompletedActionButtons } from './ActionButtons';
 import CallRecording from '../../common/CallRecording';
+import AudioTranscription from './AudioTranscription';
 
 // Import utilities
 import { STATUSES } from './constants';
@@ -72,10 +73,6 @@ function RunTest() {
   
   const [callSid, setCallSid] = useState(null);
   
-  // Real-time monitoring state
-  const [realtimeMonitoring, setRealtimeMonitoring] = useState(false);
-  const [monitoredCalls, setMonitoredCalls] = useState([]);
-  
   // Add Firebase real-time subscription state
   const [firebaseSubscription, setFirebaseSubscription] = useState(null);
   
@@ -123,12 +120,6 @@ function RunTest() {
         // This happens silently in the background when the user navigates away
         handleSaveResultsQuietly();
       }
-      
-      // Stop real-time monitoring when component unmounts
-      // if (realtimeMonitor.isMonitoring()) {
-      //   console.log("Stopping real-time monitoring on component unmount");
-      //   realtimeMonitor.stopMonitoring();
-      // }
       
       // Reset Firebase transcript service
       firebaseTranscriptService.reset();
@@ -272,7 +263,6 @@ function RunTest() {
                   // If we have metrics, the test is likely completed
                   if (conversationData.call_status === 'completed') {
                     setSimulationStatus(STATUSES.COMPLETED);
-                    setRealtimeMonitoring(false);
                   }
                 }
               } else {
@@ -313,164 +303,6 @@ function RunTest() {
         
         setTranscript(initialTranscript);
         persistentTranscriptRef.current = initialTranscript;
-        
-        // Start real-time monitoring for this specific call
-        const callerNumbers = ["+12495042461", "12495042461"]; // The testing agent numbers
-        const recipientNumbers = test?.target_phone_numbers || [selectedPhoneNumber]; // The restaurant numbers
-        
-        console.log("🔍 Starting real-time monitoring for call...");
-        console.log("📞 Monitoring calls from:", callerNumbers);
-        console.log("📞 Monitoring calls to:", recipientNumbers);
-        setRealtimeMonitoring(true);
-        
-        // Set up real-time monitoring callbacks
-        const monitoringCallbacks = {
-          onTranscriptUpdate: async (callId, newEntries, allEntries) => {
-            console.log(`📝 Real-time transcript update for ${callId}: ${newEntries.length} new entries`);
-            console.log("New entries:", newEntries);
-            console.log("🔍 DEBUG: Raw entry roles from real-time monitor:", newEntries.map(e => ({role: e.role, message: e.message?.substring(0, 30)})));
-            
-            // Save new entries to Firebase conversations/current path
-            if (newEntries.length > 0) {
-              console.log("🔥🔥🔥 FIREBASE SAVE STARTING 🔥🔥🔥");
-              console.log("🔥 Preparing to save messages to Firebase...");
-              
-              // Fixed mapping: role 'agent' = TestAgent (testing/OpenAI), role 'user' = OrderingAgent (phoneline/restaurant AI)
-              const firebaseMessages = newEntries.map(entry => ({
-                agent: entry.role === 'agent' ? 'TestAgent' : 'OrderingAgent',
-                message: entry.message,
-                session_id: entry.rawData?.session_id || callId,
-                timestamp: entry.timestamp
-              }));
-              
-              console.log("🔥 Firebase messages to save:", firebaseMessages);
-              console.log(`🔥 Attempting to save ${firebaseMessages.length} messages to Firebase...`);
-              
-              // Save to Firebase using the transcript service
-              try {
-                const saveResult = await firebaseTranscriptService.addMessages(firebaseMessages);
-                if (saveResult) {
-                  console.log(`✅✅✅ SUCCESS: Saved ${firebaseMessages.length} messages to Firebase conversations/current ✅✅✅`);
-                } else {
-                  console.error("❌❌❌ FAILED: addMessages returned false ❌❌❌");
-                }
-              } catch (error) {
-                console.error("❌❌❌ ERROR saving messages to Firebase:", error);
-                console.error("❌ Error details:", error.message, error.code);
-                
-                // Try to save individual messages if batch save fails
-                console.log("🔄 Attempting to save messages individually...");
-                for (const message of firebaseMessages) {
-                  try {
-                    const individualResult = await firebaseTranscriptService.addMessage(message);
-                    if (individualResult) {
-                      console.log(`✅ Saved individual message: ${message.agent} - ${message.message?.substring(0, 30)}...`);
-                    } else {
-                      console.error(`❌ Failed to save individual message (returned false)`);
-                    }
-                  } catch (individualError) {
-                    console.error(`❌ Failed to save individual message:`, individualError);
-                  }
-                }
-              }
-              
-              console.log("🔥🔥🔥 FIREBASE SAVE COMPLETED 🔥🔥🔥");
-            }
-            
-            // Convert Firebase transcript format to our component format for local display
-            // CORRECTED mapping: TestAgent (caller/testing) = 'user' speaker, OrderingAgent (restaurant AI being tested) = 'agent' speaker
-            const formattedEntries = allEntries.map(entry => ({
-              speaker: entry.role === 'agent' ? 'user' : 'agent',
-              text: entry.message,
-              timestamp: entry.timestamp,
-              session_id: entry.rawData?.session_id || callId
-            }));
-
-            console.log("🔍 DEBUG: All entries from real-time monitor:", allEntries.map(e => ({role: e.role, message: e.message?.substring(0, 30)})));
-            console.log("🔍 DEBUG: Formatted entries for local display:", formattedEntries.map(e => ({speaker: e.speaker, text: e.text?.substring(0, 30)})));
-
-            // Update local transcript state for immediate UI feedback
-            setTranscript(prev => {
-              // Merge with existing system messages
-              const systemMessages = prev.filter(msg => msg.speaker === 'system');
-              const combinedTranscript = [...systemMessages, ...formattedEntries];
-              persistentTranscriptRef.current = combinedTranscript;
-              console.log(`📝 Updated local transcript: ${combinedTranscript.length} total messages`);
-              return combinedTranscript;
-            });
-          },
-          
-          onCallStatusChange: async (callId, status, callData) => {
-            console.log(`📞 Call status change for ${callId}: ${status}`);
-            
-            // Update Firebase with call status
-            if (status === 'completed') {
-              firebaseTranscriptService.updateCallStatus('completed').catch(error => {
-                console.error("❌ Failed to update call status in Firebase:", error);
-              });
-            } else if (status === 'started') {
-              firebaseTranscriptService.updateCallStatus('in_progress').catch(error => {
-                console.error("❌ Failed to update call status in Firebase:", error);
-              });
-            } else if (status === 'cancelled') {
-              firebaseTranscriptService.updateCallStatus('cancelled').catch(error => {
-                console.error("❌ Failed to update call status in Firebase:", error);
-              });
-            }
-            
-            if (status === 'completed') {
-              console.log("✅ Call completed via real-time monitoring");
-              setSimulationStatus(STATUSES.COMPLETED);
-              setRealtimeMonitoring(false);
-              
-              // Ensure complete transcript is saved to Firebase
-              const currentTranscript = persistentTranscriptRef.current.length > 0 ? 
-                persistentTranscriptRef.current : transcript;
-              
-              firebaseTranscriptService.ensureTranscriptSaved(currentTranscript)
-                .then(() => {
-                  console.log("✅ Ensured complete transcript is saved to Firebase");
-                })
-                .catch((firebaseError) => {
-                  console.error("❌ Failed to ensure transcript is saved to Firebase:", firebaseError);
-                });
-              
-              // Mark all tasks as completed
-              setTasksInFlow(prev => prev.map(task => ({ ...task, status: STATUSES.COMPLETED })));
-              
-              // Stop monitoring
-              realtimeMonitor.stopMonitoring();
-            } else if (status === 'started') {
-              // Update monitored calls list
-              setMonitoredCalls(prev => [...prev, { callId, ...callData }]);
-            }
-          },
-          
-          onError: (error) => {
-            console.error("❌ Real-time monitoring error:", error);
-            setError(`Real-time monitoring error: ${error.message}`);
-          }
-        };
-        
-        // Start the real-time monitoring
-        // try {
-        //   await realtimeMonitor.startMonitoring(callerNumbers, recipientNumbers, monitoringCallbacks);
-        //   console.log("✅ Real-time monitoring started successfully");
-        // } catch (monitoringError) {
-        //   console.error("❌ Failed to start real-time monitoring:", monitoringError);
-        //   setError(`Warning: Real-time monitoring failed to start: ${monitoringError.message}`);
-        //   setRealtimeMonitoring(false);
-        //   // Continue with the test even if monitoring fails
-        // }
-        
-        // Set the first task to running
-        if (tasksInFlow.length > 0) {
-          setTasksInFlow(prev => {
-            const updated = [...prev];
-            updated[0] = { ...updated[0], status: STATUSES.RUNNING };
-            return updated;
-          });
-        }
         
         // Set up polling
         setupTranscriptPolling({
@@ -638,7 +470,6 @@ function RunTest() {
         callSid,
         setSimulationStatus,
         setRunning,
-        setRealtimeMonitoring
       );
       
       // Clear call SID after successful cancellation
@@ -942,8 +773,6 @@ function RunTest() {
             simulationId={simulationId}
             selectedPhoneNumber={selectedPhoneNumber}
             overallScore={overallScore}
-            realtimeMonitoring={realtimeMonitoring}
-            monitoredCalls={monitoredCalls}
             onSaveTranscriptToFirebase={handleSaveTranscriptToFirebase}
             onTestFirebaseConnection={handleTestFirebaseConnection}
             onManualMetricsEvaluation={handleManualMetricsEvaluation}
@@ -954,7 +783,7 @@ function RunTest() {
           <TaskList tasksInFlow={tasksInFlow} />
           
           {transcript.length > 0 && (
-            <TranscriptViewer transcript={transcript} realtimeMonitoring={realtimeMonitoring} />
+            <TranscriptViewer transcript={transcript} />
           )}
           
           {simulationStatus === STATUSES.RUNNING && (
@@ -991,6 +820,16 @@ function RunTest() {
                   testName={test?.name || 'Test Run'}
                 />
               </div>
+            </div>
+          )}
+
+          {simulationStatus === STATUSES.COMPLETED && callSid && (
+            <div className="mt-6">
+              <AudioTranscription 
+                testId={testId}
+                organizationId={currentOrganizationUsername}
+                callSid={callSid}
+              />
             </div>
           )}
         </div>

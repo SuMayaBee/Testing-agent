@@ -1,13 +1,11 @@
 import React from 'react';
 import { formatScore, getScoreClass } from './constants';
-import { WifiIcon, SignalIcon, CloudArrowUpIcon, CheckCircleIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { CloudArrowUpIcon, CheckCircleIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 
 function TestExecutionInfo({ 
   simulationId, 
   selectedPhoneNumber, 
   overallScore, 
-  realtimeMonitoring, 
-  monitoredCalls,
   onSaveTranscriptToFirebase,
   onTestFirebaseConnection,
   onManualMetricsEvaluation,
@@ -22,20 +20,6 @@ function TestExecutionInfo({
       {simulationId && (
         <p>
           <span className="font-medium">Simulation ID:</span> {simulationId}
-        </p>
-      )}
-      {realtimeMonitoring && (
-        <p className="flex items-center">
-          <span className="font-medium">Real-time Monitoring:</span>
-          <span className="ml-2 flex items-center text-green-600">
-            <SignalIcon className="w-4 h-4 mr-1 animate-pulse" />
-            Active
-          </span>
-          {monitoredCalls.length > 0 && (
-            <span className="ml-2 text-sm text-secondary-600">
-              ({monitoredCalls.length} call{monitoredCalls.length !== 1 ? 's' : ''} monitored)
-            </span>
-          )}
         </p>
       )}
       {overallScore !== null && overallScore !== undefined && (
