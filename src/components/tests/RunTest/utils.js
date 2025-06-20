@@ -197,6 +197,141 @@ export const useTranscriptStream = (testId, organizationId) => {
   const audioBufferQueueRef = useRef([]);
   const isConnected = connectionStatus === 'connected';
 
+  // Audio processing functions
+  const initializeAudioContext = useCallback(async () => {
+    if (!audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({
+          sampleRate: 8000 // Twilio uses 8kHz for phone calls, not 16kHz
+        });
+        
+        // Resume audio context if it's suspended (required by Chrome)
+        if (audioContextRef.current.state === 'suspended') {
+          await audioContextRef.current.resume();
+        }
+        
+        console.log('🔊 Audio context initialized for real-time streaming');
+      } catch (error) {
+        console.error('🔊 Error initializing audio context:', error);
+      }
+    }
+  }, []);
+
+  // μ-law to PCM conversion function
+  const muLawToPcm = useCallback((mulaw) => {
+    const BIAS = 0x84;
+    const CLIP = 32635;
+    
+    mulaw = ~mulaw;
+    const sign = mulaw & 0x80;
+    const exponent = (mulaw >> 4) & 0x07;
+    const mantissa = mulaw & 0x0F;
+    
+    let sample = mantissa << (exponent + 3);
+    if (exponent !== 0) {
+      sample += BIAS << exponent;
+    }
+    
+    return sign !== 0 ? -sample : sample;
+  }, []);
+
+  // Buffer for smooth playback at 8kHz
+  const playbackBufferRef = useRef([]);
+  const PLAYBACK_BATCH_SIZE = 5; // Number of chunks to buffer before playback
+
+  // --- Streaming audio playback using ScriptProcessorNode for smoothness ---
+  const audioStreamBufferRef = useRef(new Float32Array(0));
+  const processorNodeRef = useRef(null);
+  const STREAM_SAMPLE_RATE = 44100;
+  const STREAM_CHUNK_SIZE = 2048; // Number of samples per callback
+
+  // Helper: Append new samples to the stream buffer
+  function appendToStreamBuffer(newSamples) {
+    const oldBuffer = audioStreamBufferRef.current;
+    const combined = new Float32Array(oldBuffer.length + newSamples.length);
+    combined.set(oldBuffer, 0);
+    combined.set(newSamples, oldBuffer.length);
+    audioStreamBufferRef.current = combined;
+  }
+
+  // Start the ScriptProcessorNode for streaming
+  function startAudioStream() {
+    if (!audioContextRef.current || processorNodeRef.current) return;
+    const processor = audioContextRef.current.createScriptProcessor(STREAM_CHUNK_SIZE, 0, 1);
+    processor.onaudioprocess = (e) => {
+      const output = e.outputBuffer.getChannelData(0);
+      const buffer = audioStreamBufferRef.current;
+      if (buffer.length >= STREAM_CHUNK_SIZE) {
+        output.set(buffer.subarray(0, STREAM_CHUNK_SIZE));
+        audioStreamBufferRef.current = buffer.subarray(STREAM_CHUNK_SIZE);
+      } else {
+        // Not enough data, fill with zeros
+        output.fill(0);
+      }
+    };
+    processor.connect(audioContextRef.current.destination);
+    processorNodeRef.current = processor;
+  }
+
+  // Stop the ScriptProcessorNode
+  function stopAudioStream() {
+    if (processorNodeRef.current) {
+      processorNodeRef.current.disconnect();
+      processorNodeRef.current = null;
+    }
+    audioStreamBufferRef.current = new Float32Array(0);
+  }
+
+  // Modified handleAudioChunk for streaming
+  const handleAudioChunk = useCallback(async (audioData) => {
+    if (!audioContextRef.current || !audioData.audio_data) return;
+    try {
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+      const binaryString = atob(audioData.audio_data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const pcmSamples = new Int16Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) {
+        pcmSamples[i] = muLawToPcm(bytes[i]);
+      }
+      // Convert to Float32 [-1, 1]
+      const float32 = new Float32Array(pcmSamples.length);
+      for (let i = 0; i < pcmSamples.length; i++) {
+        float32[i] = pcmSamples[i] / 32768.0;
+      }
+      playbackBufferRef.current.push(float32);
+      if (playbackBufferRef.current.length >= PLAYBACK_BATCH_SIZE) {
+        // Concatenate buffered chunks
+        const totalLength = playbackBufferRef.current.reduce((sum, arr) => sum + arr.length, 0);
+        const merged = new Float32Array(totalLength);
+        let offset = 0;
+        for (const arr of playbackBufferRef.current) {
+          merged.set(arr, offset);
+          offset += arr.length;
+        }
+        playbackBufferRef.current = [];
+        // Create AudioBuffer at 8kHz
+        const audioBuffer = audioContextRef.current.createBuffer(1, merged.length, 8000);
+        audioBuffer.copyToChannel(merged, 0);
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContextRef.current.destination);
+        source.start();
+      }
+    } catch (error) {
+      console.error('🔊 Error processing audio chunk:', error);
+      console.error('🔊 Audio data details:', {
+        speaker: audioData.speaker,
+        dataLength: audioData.audio_data?.length,
+        format: audioData.format
+      });
+    }
+  }, [muLawToPcm]);
+
   // Handle incoming WebSocket messages
   const handleMessage = useCallback((data) => {
     console.log('📡 Processing WebSocket message:', data);
@@ -219,15 +354,13 @@ export const useTranscriptStream = (testId, organizationId) => {
           speaker: 'agent'
         }]);
         break;
-        
       case 'audio_chunk':
         // Handle real-time audio streaming
+        setAudioChunks(prev => [...prev.slice(-50), data]); // Keep last 50 chunks
         if (isAudioEnabled && data.audio_data) {
           handleAudioChunk(data);
         }
-        setAudioChunks(prev => [...prev.slice(-50), data]); // Keep last 50 chunks
         break;
-        
       case 'call_started':
         setCallStatus('started');
         setMessages(prev => [...prev, {
@@ -237,7 +370,6 @@ export const useTranscriptStream = (testId, organizationId) => {
           speaker: 'system'
         }]);
         break;
-        
       case 'call_ended':
         setCallStatus('ended');
         setMessages(prev => [...prev, {
@@ -247,7 +379,6 @@ export const useTranscriptStream = (testId, organizationId) => {
           speaker: 'system'
         }]);
         break;
-        
       default:
         console.log('📡 Unknown message type:', data.type);
         // Handle generic messages
@@ -258,7 +389,7 @@ export const useTranscriptStream = (testId, organizationId) => {
           speaker: data.speaker || 'system'
         }]);
     }
-  }, []);
+  }, [isAudioEnabled, handleAudioChunk]);
 
   // Handle connection events
   const handleConnect = useCallback(() => {
@@ -321,136 +452,17 @@ export const useTranscriptStream = (testId, organizationId) => {
     setError(null);
   }, [testId]);
 
-  // Audio processing functions
-  const initializeAudioContext = useCallback(async () => {
-    if (!audioContextRef.current) {
-      try {
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({
-          sampleRate: 8000 // Twilio uses 8kHz for phone calls, not 16kHz
-        });
-        
-        // Resume audio context if it's suspended (required by Chrome)
-        if (audioContextRef.current.state === 'suspended') {
-          await audioContextRef.current.resume();
-        }
-        
-        console.log('🔊 Audio context initialized for real-time streaming');
-      } catch (error) {
-        console.error('🔊 Error initializing audio context:', error);
-      }
-    }
-  }, []);
-
-  const handleAudioChunk = useCallback(async (audioData) => {
-    if (!audioContextRef.current || !audioData.audio_data) {
-      console.log('🔊 Skipping audio chunk - no context or data:', {
-        hasContext: !!audioContextRef.current,
-        hasData: !!audioData.audio_data,
-        audioDataLength: audioData.audio_data?.length
-      });
-      return;
-    }
-
-    try {
-      console.log('🔊 Processing audio chunk:', {
-        speaker: audioData.speaker,
-        dataLength: audioData.audio_data.length,
-        format: audioData.format,
-        contextState: audioContextRef.current.state
-      });
-
-      // Resume audio context if suspended
-      if (audioContextRef.current.state === 'suspended') {
-        console.log('🔊 Resuming suspended audio context');
-        await audioContextRef.current.resume();
-      }
-
-      // Decode base64 audio data to get raw PCM bytes
-      const binaryString = atob(audioData.audio_data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      console.log('🔊 Decoded audio data:', {
-        originalLength: audioData.audio_data.length,
-        bytesLength: bytes.length,
-        firstFewBytes: Array.from(bytes.slice(0, 10))
-      });
-
-      // Convert μ-law encoded bytes to 16-bit PCM
-      // Twilio sends μ-law (G.711) encoded audio data, not raw PCM
-      const pcmSamples = new Int16Array(bytes.length);
-      for (let i = 0; i < bytes.length; i++) {
-        pcmSamples[i] = muLawToPcm(bytes[i]);
-      }
-
-      console.log('🔊 Converted to PCM:', {
-        samplesLength: pcmSamples.length,
-        firstFewSamples: Array.from(pcmSamples.slice(0, 10)),
-        maxSample: Math.max(...pcmSamples),
-        minSample: Math.min(...pcmSamples)
-      });
-
-      // Create AudioBuffer from PCM samples
-      const audioBuffer = audioContextRef.current.createBuffer(
-        1, // mono channel
-        pcmSamples.length,
-        8000 // 8kHz sample rate for phone calls
-      );
-
-      // Copy PCM data to AudioBuffer
-      const channelData = audioBuffer.getChannelData(0);
-      for (let i = 0; i < pcmSamples.length; i++) {
-        channelData[i] = pcmSamples[i] / 32768.0; // Convert to float [-1, 1]
-      }
-
-      console.log('🔊 Created AudioBuffer:', {
-        duration: audioBuffer.duration,
-        sampleRate: audioBuffer.sampleRate,
-        numberOfChannels: audioBuffer.numberOfChannels,
-        length: audioBuffer.length
-      });
-
-      // Play the audio
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContextRef.current.destination);
-      source.start();
-
-      console.log(`🔊 Successfully playing audio chunk from ${audioData.speaker} (${bytes.length} bytes, ${audioBuffer.duration.toFixed(3)}s)`);
-    } catch (error) {
-      console.error('🔊 Error processing audio chunk:', error);
-      console.error('🔊 Audio data details:', {
-        speaker: audioData.speaker,
-        dataLength: audioData.audio_data?.length,
-        format: audioData.format
-      });
-    }
-  }, []);
-
-  // μ-law to PCM conversion function
-  const muLawToPcm = useCallback((mulaw) => {
-    const BIAS = 0x84;
-    const CLIP = 32635;
-    
-    mulaw = ~mulaw;
-    const sign = mulaw & 0x80;
-    const exponent = (mulaw >> 4) & 0x07;
-    const mantissa = mulaw & 0x0F;
-    
-    let sample = mantissa << (exponent + 3);
-    if (exponent !== 0) {
-      sample += BIAS << exponent;
-    }
-    
-    return sign !== 0 ? -sample : sample;
-  }, []);
-
   const enableAudio = useCallback(async () => {
     try {
       await initializeAudioContext();
       setIsAudioEnabled(true);
+      startAudioStream();
+      // Play any buffered audio chunks that arrived while audio was off
+      for (const chunk of audioChunks) {
+        if (chunk.audio_data) {
+          await handleAudioChunk(chunk);
+        }
+      }
       console.log('🔊 Real-time audio streaming enabled');
       console.log('🔊 Audio context state:', audioContextRef.current?.state);
       console.log('🔊 Audio context sample rate:', audioContextRef.current?.sampleRate);
@@ -458,10 +470,11 @@ export const useTranscriptStream = (testId, organizationId) => {
       console.error('🔊 Error enabling audio:', error);
       setIsAudioEnabled(false);
     }
-  }, [initializeAudioContext]);
+  }, [initializeAudioContext, audioChunks, handleAudioChunk]);
 
   const disableAudio = useCallback(() => {
     setIsAudioEnabled(false);
+    stopAudioStream();
     if (audioContextRef.current) {
       console.log('🔊 Closing audio context');
       audioContextRef.current.close();
@@ -651,4 +664,4 @@ export async function fetchMetricsFromFirebase(currentOrganizationUsername, test
     console.error("❌ Error fetching metrics from Firebase:", error);
     return null;
   }
-} 
+}
