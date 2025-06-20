@@ -10,7 +10,7 @@ function TranscriptViewer({ transcript }) {
   const transcriptContainerRef = useRef(null);
   const prevTranscriptLengthRef = useRef(0);
   const prevLastSpeakerRef = useRef(null);
-
+  
   // Format timestamp for display
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return '';
@@ -53,19 +53,19 @@ function TranscriptViewer({ transcript }) {
       return '';
     }
   };
-
+  
   // Process transcript for display (simplified version without response time calculations)
   const processTranscriptForDisplay = (transcriptData) => {
     if (!transcriptData || !Array.isArray(transcriptData)) {
       return [];
-    }
+        }
 
     return transcriptData.map((message, index) => ({
       ...message,
       index
     }));
   };
-
+  
   const processedTranscript = processTranscriptForDisplay(transcript);
 
   // Auto-scroll functionality
@@ -83,7 +83,7 @@ function TranscriptViewer({ transcript }) {
     } else if (currentTranscriptLength === prevTranscriptLengthRef.current && 
                currentLastSpeaker !== prevLastSpeakerRef.current) {
       // Same number of messages but last speaker changed (message updated)
-      shouldScroll = true;
+          shouldScroll = true;
     }
     
     // Perform the scroll if needed
@@ -102,7 +102,7 @@ function TranscriptViewer({ transcript }) {
       prevLastSpeakerRef.current = transcript[transcript.length - 1].speaker;
     }
   }, [transcript]);
-
+  
   return (
     <div className="mb-6">
       <h3 className="font-medium flex items-center mb-4">

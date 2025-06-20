@@ -76,6 +76,17 @@ export const voiceAgentAPI = {
     );
   },
 
+  // Manually trigger transcription processing
+  triggerManualTranscription: (organizationId, testId) => {
+    return fetchAPI(
+      `/voice-agent/manual-transcription/${testId}?organization_id=${organizationId}`,
+      {
+        method: "POST",
+      },
+      false // Disable caching for fresh data
+    );
+  },
+
   // Get all archived conversations for an organization
   getAllArchivedConversations: (organizationId) => {
     return fetchAPI(
