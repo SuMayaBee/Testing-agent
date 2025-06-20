@@ -1,53 +1,532 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { voiceAgentAPI, callAnalyticsAPI } from '../../../lib/api';
 import { normalizeScore, STATUSES } from './constants';
 import { firebaseTranscriptService } from './firebaseTranscriptService';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase-config';
 
-// Helper function to format metrics for display
-export function formatMetricsForDisplay(transcriptResult, testMetrics) {
-  if (!transcriptResult || !transcriptResult.metrics_results) {
-    console.warn("No metrics results found in transcript data");
+/**
+ * Real-time transcript WebSocket manager
+ * Connects to the backend WebSocket for live transcript streaming without database overhead
+ */
+export class TranscriptWebSocketManager {
+  constructor(testId, onMessage, onError = null, onConnect = null, onDisconnect = null) {
+    this.testId = testId;
+    this.onMessage = onMessage;
+    this.onError = onError;
+    this.onConnect = onConnect;
+    this.onDisconnect = onDisconnect;
+    this.ws = null;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000; // Start with 1 second
+    this.isConnecting = false;
+    this.shouldReconnect = true;
+    this.pingInterval = null;
+    this.pongTimeout = null;
+  }
+
+  connect() {
+    if (this.isConnecting || (this.ws && this.ws.readyState === WebSocket.OPEN)) {
+      return;
+    }
+
+    this.isConnecting = true;
+    
+    try {
+      // Determine WebSocket URL based on current location
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      
+      // Simple host determination - use localhost:8000 for development
+      const host = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
+      
+      const wsUrl = `${protocol}//${host}/api/voice-agent/transcript-stream/${this.testId}`;
+      
+      console.log(`📡 Connecting to WebSocket: ${wsUrl}`);
+      
+      this.ws = new WebSocket(wsUrl);
+      
+      this.ws.onopen = () => {
+        console.log('📡 WebSocket connected for transcript streaming');
+        this.isConnecting = false;
+        this.reconnectAttempts = 0;
+        this.reconnectDelay = 1000;
+        
+        // Start ping/pong keepalive
+        this.startPingPong();
+        
+        if (this.onConnect) {
+          this.onConnect();
+        }
+      };
+      
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          // Handle pong responses
+          if (data.type === 'pong') {
+            if (this.pongTimeout) {
+              clearTimeout(this.pongTimeout);
+              this.pongTimeout = null;
+            }
+            return;
+          }
+          
+          console.log('📡 Received WebSocket message:', data);
+          
+          if (this.onMessage) {
+            this.onMessage(data);
+          }
+        } catch (error) {
+          console.error('📡 Error parsing WebSocket message:', error, event.data);
+        }
+      };
+      
+      this.ws.onclose = (event) => {
+        console.log('📡 WebSocket connection closed:', event.code, event.reason);
+        this.isConnecting = false;
+        this.stopPingPong();
+        
+        if (this.onDisconnect) {
+          this.onDisconnect();
+        }
+        
+        // Attempt to reconnect if it wasn't a clean close and we should reconnect
+        if (this.shouldReconnect && event.code !== 1000) {
+          this.attemptReconnect();
+        }
+      };
+      
+      this.ws.onerror = (error) => {
+        console.error('📡 WebSocket error:', error);
+        this.isConnecting = false;
+        
+        if (this.onError) {
+          this.onError(error);
+        }
+      };
+      
+    } catch (error) {
+      console.error('📡 Error creating WebSocket connection:', error);
+      this.isConnecting = false;
+      
+      if (this.onError) {
+        this.onError(error);
+      }
+    }
+  }
+
+  startPingPong() {
+    // Send ping every 30 seconds
+    this.pingInterval = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'ping' }));
+        
+        // Set timeout to detect if pong is not received
+        this.pongTimeout = setTimeout(() => {
+          console.warn('📡 Pong not received, connection may be dead');
+          this.ws.close();
+        }, 5000);
+      }
+    }, 30000);
+  }
+
+  stopPingPong() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+    
+    if (this.pongTimeout) {
+      clearTimeout(this.pongTimeout);
+      this.pongTimeout = null;
+    }
+  }
+
+  attemptReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('📡 Max reconnection attempts reached');
+      return;
+    }
+
+    this.reconnectAttempts++;
+    console.log(`📡 Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectDelay}ms`);
+    
+    setTimeout(() => {
+      if (this.shouldReconnect) {
+        this.connect();
+      }
+    }, this.reconnectDelay);
+    
+    // Exponential backoff
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
+  }
+
+  disconnect() {
+    this.shouldReconnect = false;
+    this.stopPingPong();
+    
+    if (this.ws) {
+      this.ws.close(1000, 'Client disconnect');
+      this.ws = null;
+    }
+  }
+
+  isConnected() {
+    return this.ws && this.ws.readyState === WebSocket.OPEN;
+  }
+}
+
+/**
+ * React hook for managing real-time transcript streaming
+ * @param {string} testId - The test ID to stream transcripts for
+ * @param {string} organizationId - The organization ID (for validation)
+ * @returns {Object} - Transcript streaming state and controls
+ */
+export const useTranscriptStream = (testId, organizationId) => {
+  const [messages, setMessages] = useState([]);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [callStatus, setCallStatus] = useState('idle');
+  const [error, setError] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+  
+  const wsManagerRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const audioBufferQueueRef = useRef([]);
+  const isConnected = connectionStatus === 'connected';
+
+  // Handle incoming WebSocket messages
+  const handleMessage = useCallback((data) => {
+    console.log('📡 Processing WebSocket message:', data);
+    
+    switch (data.type) {
+      case 'user_speech':
+        setMessages(prev => [...prev, {
+          type: 'user_speech',
+          text: data.transcript,
+          timestamp: data.timestamp || new Date().toISOString(),
+          speaker: 'user'
+        }]);
+        break;
+        
+      case 'assistant_response':
+        setMessages(prev => [...prev, {
+          type: 'assistant_response', 
+          text: data.transcript,
+          timestamp: data.timestamp || new Date().toISOString(),
+          speaker: 'agent'
+        }]);
+        break;
+        
+      case 'audio_chunk':
+        // Handle real-time audio streaming
+        if (isAudioEnabled && data.audio_data) {
+          handleAudioChunk(data);
+        }
+        setAudioChunks(prev => [...prev.slice(-50), data]); // Keep last 50 chunks
+        break;
+        
+      case 'call_started':
+        setCallStatus('started');
+        setMessages(prev => [...prev, {
+          type: 'call_started',
+          text: 'Call started',
+          timestamp: data.timestamp || new Date().toISOString(),
+          speaker: 'system'
+        }]);
+        break;
+        
+      case 'call_ended':
+        setCallStatus('ended');
+        setMessages(prev => [...prev, {
+          type: 'call_ended',
+          text: 'Call ended',
+          timestamp: data.timestamp || new Date().toISOString(),
+          speaker: 'system'
+        }]);
+        break;
+        
+      default:
+        console.log('📡 Unknown message type:', data.type);
+        // Handle generic messages
+        setMessages(prev => [...prev, {
+          type: 'message',
+          text: data.message || data.transcript || 'Unknown message',
+          timestamp: data.timestamp || new Date().toISOString(),
+          speaker: data.speaker || 'system'
+        }]);
+    }
+  }, []);
+
+  // Handle connection events
+  const handleConnect = useCallback(() => {
+    setConnectionStatus('connected');
+    setError(null);
+    console.log('📡 Real-time transcript connection established');
+  }, []);
+
+  const handleDisconnect = useCallback(() => {
+    setConnectionStatus('disconnected');
+    console.log('📡 Real-time transcript connection lost');
+  }, []);
+
+  const handleError = useCallback((error) => {
+    setError(error);
+    setConnectionStatus('disconnected');
+    console.error('📡 Real-time transcript connection error:', error);
+  }, []);
+
+  // Initialize WebSocket connection when testId changes
+  useEffect(() => {
+    if (!testId || !organizationId) {
+      console.log('📡 No testId or organizationId provided, skipping WebSocket connection');
+      return;
+    }
+
+    console.log(`📡 Setting up real-time transcript stream for test: ${testId}`);
+    
+    // Clean up existing connection
+    if (wsManagerRef.current) {
+      wsManagerRef.current.disconnect();
+    }
+
+    // Create new WebSocket manager
+    wsManagerRef.current = new TranscriptWebSocketManager(
+      testId,
+      handleMessage,
+      handleError,
+      handleConnect,
+      handleDisconnect
+    );
+
+    setConnectionStatus('connecting');
+    wsManagerRef.current.connect();
+
+    // Cleanup function
+    return () => {
+      if (wsManagerRef.current) {
+        wsManagerRef.current.disconnect();
+        wsManagerRef.current = null;
+      }
+      setConnectionStatus('disconnected');
+    };
+  }, [testId, organizationId, handleMessage, handleError, handleConnect, handleDisconnect]);
+
+  // Clear messages when testId changes
+  useEffect(() => {
+    setMessages([]);
+    setCallStatus('idle');
+    setError(null);
+  }, [testId]);
+
+  // Audio processing functions
+  const initializeAudioContext = useCallback(async () => {
+    if (!audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({
+          sampleRate: 8000 // Twilio uses 8kHz for phone calls, not 16kHz
+        });
+        
+        // Resume audio context if it's suspended (required by Chrome)
+        if (audioContextRef.current.state === 'suspended') {
+          await audioContextRef.current.resume();
+        }
+        
+        console.log('🔊 Audio context initialized for real-time streaming');
+      } catch (error) {
+        console.error('🔊 Error initializing audio context:', error);
+      }
+    }
+  }, []);
+
+  const handleAudioChunk = useCallback(async (audioData) => {
+    if (!audioContextRef.current || !audioData.audio_data) {
+      console.log('🔊 Skipping audio chunk - no context or data:', {
+        hasContext: !!audioContextRef.current,
+        hasData: !!audioData.audio_data,
+        audioDataLength: audioData.audio_data?.length
+      });
+      return;
+    }
+
+    try {
+      console.log('🔊 Processing audio chunk:', {
+        speaker: audioData.speaker,
+        dataLength: audioData.audio_data.length,
+        format: audioData.format,
+        contextState: audioContextRef.current.state
+      });
+
+      // Resume audio context if suspended
+      if (audioContextRef.current.state === 'suspended') {
+        console.log('🔊 Resuming suspended audio context');
+        await audioContextRef.current.resume();
+      }
+
+      // Decode base64 audio data to get raw PCM bytes
+      const binaryString = atob(audioData.audio_data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      console.log('🔊 Decoded audio data:', {
+        originalLength: audioData.audio_data.length,
+        bytesLength: bytes.length,
+        firstFewBytes: Array.from(bytes.slice(0, 10))
+      });
+
+      // Convert μ-law encoded bytes to 16-bit PCM
+      // Twilio sends μ-law (G.711) encoded audio data, not raw PCM
+      const pcmSamples = new Int16Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) {
+        pcmSamples[i] = muLawToPcm(bytes[i]);
+      }
+
+      console.log('🔊 Converted to PCM:', {
+        samplesLength: pcmSamples.length,
+        firstFewSamples: Array.from(pcmSamples.slice(0, 10)),
+        maxSample: Math.max(...pcmSamples),
+        minSample: Math.min(...pcmSamples)
+      });
+
+      // Create AudioBuffer from PCM samples
+      const audioBuffer = audioContextRef.current.createBuffer(
+        1, // mono channel
+        pcmSamples.length,
+        8000 // 8kHz sample rate for phone calls
+      );
+
+      // Copy PCM data to AudioBuffer
+      const channelData = audioBuffer.getChannelData(0);
+      for (let i = 0; i < pcmSamples.length; i++) {
+        channelData[i] = pcmSamples[i] / 32768.0; // Convert to float [-1, 1]
+      }
+
+      console.log('🔊 Created AudioBuffer:', {
+        duration: audioBuffer.duration,
+        sampleRate: audioBuffer.sampleRate,
+        numberOfChannels: audioBuffer.numberOfChannels,
+        length: audioBuffer.length
+      });
+
+      // Play the audio
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContextRef.current.destination);
+      source.start();
+
+      console.log(`🔊 Successfully playing audio chunk from ${audioData.speaker} (${bytes.length} bytes, ${audioBuffer.duration.toFixed(3)}s)`);
+    } catch (error) {
+      console.error('🔊 Error processing audio chunk:', error);
+      console.error('🔊 Audio data details:', {
+        speaker: audioData.speaker,
+        dataLength: audioData.audio_data?.length,
+        format: audioData.format
+      });
+    }
+  }, []);
+
+  // μ-law to PCM conversion function
+  const muLawToPcm = useCallback((mulaw) => {
+    const BIAS = 0x84;
+    const CLIP = 32635;
+    
+    mulaw = ~mulaw;
+    const sign = mulaw & 0x80;
+    const exponent = (mulaw >> 4) & 0x07;
+    const mantissa = mulaw & 0x0F;
+    
+    let sample = mantissa << (exponent + 3);
+    if (exponent !== 0) {
+      sample += BIAS << exponent;
+    }
+    
+    return sign !== 0 ? -sample : sample;
+  }, []);
+
+  const enableAudio = useCallback(async () => {
+    try {
+      await initializeAudioContext();
+      setIsAudioEnabled(true);
+      console.log('🔊 Real-time audio streaming enabled');
+      console.log('🔊 Audio context state:', audioContextRef.current?.state);
+      console.log('🔊 Audio context sample rate:', audioContextRef.current?.sampleRate);
+    } catch (error) {
+      console.error('🔊 Error enabling audio:', error);
+      setIsAudioEnabled(false);
+    }
+  }, [initializeAudioContext]);
+
+  const disableAudio = useCallback(() => {
+    setIsAudioEnabled(false);
+    if (audioContextRef.current) {
+      console.log('🔊 Closing audio context');
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    console.log('🔊 Real-time audio streaming disabled');
+  }, []);
+
+  return {
+    messages,
+    connectionStatus,
+    callStatus,
+    isConnected,
+    error,
+    audioChunks,
+    isAudioEnabled,
+    enableAudio,
+    disableAudio,
+    clearMessages: () => setMessages([])
+  };
+};
+
+/**
+ * Setup real-time transcript streaming (legacy function for backward compatibility)
+ * @param {Object} options - Configuration options
+ * @returns {Function} - Cleanup function
+ */
+export const setupRealTimeTranscript = (options) => {
+  console.log('📡 Setting up real-time transcript (legacy function)');
+  
+  // This is a legacy function that was used before the hook-based approach
+  // For now, we'll return a no-op cleanup function
+  return () => {
+    console.log('📡 Cleaning up real-time transcript (legacy)');
+  };
+};
+
+/**
+ * Format metrics for display
+ * @param {Object} transcriptResult - The transcript result from API
+ * @param {Array} testMetrics - The test metrics configuration
+ * @returns {Array} - Formatted metrics for display
+ */
+export const formatMetricsForDisplay = (transcriptResult, testMetrics) => {
+  if (!transcriptResult?.metrics_results || !testMetrics) {
     return [];
   }
-  
-  console.log("Raw metrics data:", transcriptResult.metrics_results);
-  
-  const formattedMetrics = Object.entries(transcriptResult.metrics_results).map(([metric_id, data]) => {
-    // Extract base information
-    const metric = {
-    metric_id,
-      metric_name: data.metric_name || testMetrics?.find(m => m.id === metric_id)?.name || "Unknown Metric",
-      metric_type: data.metric_type || testMetrics?.find(m => m.id === metric_id)?.type || "generic",
-    score: normalizeScore(data.score),
-      details: data.details?.explanation || "No explanation provided"
-    };
-    
-    // Extract key points if available
-    if (data.details?.key_points) {
-      metric.key_points = data.details.key_points;
-    }
-    
-    // Extract category scores if available
-    if (data.details?.category_scores) {
-      metric.category_scores = data.details.category_scores;
-    }
-    
-    // Extract improvement areas if available
-    if (data.details?.improvement_areas) {
-      metric.improvement_areas = data.details.improvement_areas;
-    } else if (data.improvement_areas) {
-      metric.improvement_areas = data.improvement_areas;
-    } else {
-      metric.improvement_areas = [];
-    }
-    
-    return metric;
-  });
 
-  console.log("Formatted metrics:", formattedMetrics);
-  return formattedMetrics;
-}
+  const metricsResults = transcriptResult.metrics_results;
+  
+  return Object.entries(metricsResults).map(([metricId, metricData]) => {
+    // Find the corresponding test metric for additional info
+    const testMetric = testMetrics.find(tm => tm.id === metricId);
+    
+    return {
+      metric_id: metricId,
+      metric_name: metricData.metric_name || testMetric?.name || 'Unknown Metric',
+      score: metricData.score || 0,
+      details: metricData.details?.explanation || 'No explanation available',
+      improvement_areas: metricData.improvement_areas || [],
+      max_score: testMetric?.max_score || 100,
+      description: testMetric?.description || ''
+    };
+  });
+};
 
 // Process transcript to ensure timestamps are properly formatted
 export function processTranscript(transcript) {
@@ -172,452 +651,4 @@ export async function fetchMetricsFromFirebase(currentOrganizationUsername, test
     console.error("❌ Error fetching metrics from Firebase:", error);
     return null;
   }
-}
-
-// Function to setup transcript polling
-export function setupTranscriptPolling({
-  currentOrganizationUsername,
-  testId,
-  callSid,
-  setTranscript,
-  persistentTranscriptRef,
-  setTasksInFlow,
-  setMetricsResults,
-  setOverallScore,
-  setSimulationStatus,
-  setSavedSimulationId,
-  testMetrics,
-  setCallRecording
-}) {
-  let callCompleted = false;
-  let pollingCount = 0;
-  const maxPolls = 120; // Maximum 2 minutes of polling (with 1-second intervals)
-  
-  const pollTranscript = async () => {
-    if (callCompleted || pollingCount >= maxPolls) {
-      return;
-    }
-    
-    pollingCount++;
-    console.log(`Polling transcript #${pollingCount} for test ${testId} with call SID ${callSid}`);
-    
-    try {
-      // Poll the transcript API
-      const transcriptResult = await voiceAgentAPI.getTranscript(
-        currentOrganizationUsername,
-        testId,
-        callSid
-      );
-
-      console.log("Transcript result:", transcriptResult);
-      
-      // Debug log the received transcript
-      if (transcriptResult.transcript) {
-        console.log(`Received transcript with ${transcriptResult.transcript.length} messages`);
-        if (transcriptResult.transcript.length > 0) {
-          // Apply processing to ensure timestamps are properly formatted
-          transcriptResult.transcript = processTranscript(transcriptResult.transcript);
-          console.log(`Last transcript message: ${JSON.stringify(transcriptResult.transcript[transcriptResult.transcript.length - 1])}`);
-        }
-      }
-      
-      if (transcriptResult.error) {
-        console.warn("Transcript polling error:", transcriptResult.error);
-        // Still set an empty transcript or use any available partial data
-        if (transcriptResult.transcript && transcriptResult.transcript.length > 0) {
-          setTranscript(transcriptResult.transcript);
-          persistentTranscriptRef.current = transcriptResult.transcript;
-        } else if (persistentTranscriptRef.current.length > 0) {
-          // Use our persistent transcript as fallback if API returns empty
-          console.log(`⚠️ API returned empty transcript. Using persistent transcript (${persistentTranscriptRef.current.length} messages)`);
-          // Don't update state if we're falling back to the same data
-        }
-      } else {
-        // Only update if we got a non-empty transcript that's better than what we have
-        if (transcriptResult.transcript && 
-            (transcriptResult.transcript.length > 0 && 
-             transcriptResult.transcript.length >= persistentTranscriptRef.current.length)) {
-          console.log(`Updating transcript (${transcriptResult.transcript.length} messages)`);
-          setTranscript(transcriptResult.transcript);
-          persistentTranscriptRef.current = transcriptResult.transcript;
-        } else if (transcriptResult.transcript && transcriptResult.transcript.length === 0 && 
-                   persistentTranscriptRef.current.length > 0) {
-          console.log(`⚠️ API returned empty transcript. Keeping persistent transcript (${persistentTranscriptRef.current.length} messages)`);
-          // Keep our persistent transcript if API returns empty
-          transcriptResult.transcript = persistentTranscriptRef.current;
-        }
-        
-        // Check if call has completed
-        if (transcriptResult.call_completed) {
-          callCompleted = true;
-          
-          // Mark all tasks as completed
-          setTasksInFlow(prev => prev.map(task => ({ ...task, status: STATUSES.COMPLETED })));
-          
-          // Store the current transcript to avoid losing it during state transitions
-          const currentTranscript = persistentTranscriptRef.current.length > 0 ? 
-            [...persistentTranscriptRef.current] : 
-            [...persistentTranscriptRef.current]; // Double check second reference
-          console.log(`✅ Call completed - Saving current transcript (${currentTranscript.length} messages) to prevent flashing`);
-          
-          // Fetch call recording when call is completed
-          if (callSid && setCallRecording) {
-            try {
-              const recording = await fetchCallRecording(callSid);
-              if (recording) {
-                console.log('Call recording found:', recording);
-                setCallRecording(recording);
-              }
-            } catch (recordingError) {
-              console.error('Error fetching call recording:', recordingError);
-            }
-          }
-          
-          // Check if metrics results are already available from the backend
-          if (transcriptResult.metrics_results && Object.keys(transcriptResult.metrics_results).length > 0) {
-            console.log("Metrics results available:", transcriptResult.metrics_results);
-            
-            // Ensure we don't lose transcript during this transition
-            if (!transcriptResult.transcript || transcriptResult.transcript.length === 0 ||
-                transcriptResult.transcript.length < currentTranscript.length) {
-              console.log("Preserving existing transcript as new transcript is empty or shorter");
-              transcriptResult.transcript = currentTranscript;
-            }
-            
-            // Format metrics for display
-            const formattedMetrics = formatMetricsForDisplay(transcriptResult, testMetrics);
-
-            console.log("Formatted metrics:", formattedMetrics);
-            console.log("Individual metric scores:", formattedMetrics.map(m => ({ name: m.metric_name, score: m.score })));
-            console.log("Overall score:", transcriptResult.overall_score);
-            
-            // Store the eval_metadata in the transcript if it exists
-            if (transcriptResult.eval_metadata) {
-              const transcriptToUpdate = transcriptResult.transcript.length > 0 ? 
-                transcriptResult.transcript : currentTranscript;
-                
-              const updatedTranscript = [...transcriptToUpdate];
-              
-              if (updatedTranscript.length > 0) {
-                updatedTranscript[0] = {
-                  ...updatedTranscript[0],
-                  eval_metadata: transcriptResult.eval_metadata
-                };
-                setTranscript(updatedTranscript);
-                persistentTranscriptRef.current = updatedTranscript;
-              } else {
-                // If somehow we still have an empty transcript, create one with metadata
-                const newTranscript = [{
-                  speaker: 'system',
-                  text: 'Transcript initialized with metadata',
-                  eval_metadata: transcriptResult.eval_metadata,
-                  timestamp: new Date()
-                }];
-                setTranscript(newTranscript);
-                persistentTranscriptRef.current = newTranscript;
-              }
-            } else if (transcriptResult.transcript && transcriptResult.transcript.length > 0) {
-              // Just update transcript if no metadata but we have messages
-              setTranscript(transcriptResult.transcript);
-              persistentTranscriptRef.current = transcriptResult.transcript;
-            }
-            
-            setMetricsResults(formattedMetrics);
-            setOverallScore(normalizeScore(transcriptResult.overall_score));
-            setSimulationStatus(STATUSES.COMPLETED);
-            setSavedSimulationId(null);
-            
-            // Finalize conversation in Firebase with metrics and score (immediate case)
-            try {
-              await firebaseTranscriptService.finalizeConversation(
-                formattedMetrics,
-                normalizeScore(transcriptResult.overall_score),
-                {
-                  message_count: transcriptResult.transcript?.length || 0,
-                  eval_metadata: transcriptResult.eval_metadata
-                }
-              );
-              console.log("✅ Conversation finalized in Firebase with immediate metrics");
-            } catch (firebaseError) {
-              console.error("❌ Failed to finalize conversation in Firebase (immediate):", firebaseError);
-            }
-            
-            return; // Stop polling since we have complete data
-          }
-          
-          // If no metrics yet, wait for a short time and check again
-          // This allows time for the backend LLM evaluation to complete
-          const checkForFinalMetrics = async (attemptsLeft = 3, delay = 5000) => {
-            console.log(`Checking for final metrics. Attempts left: ${attemptsLeft}, delay: ${delay}ms`);
-            
-            try {
-              // Save current transcript to prevent flashing - CRITICAL to prevent transcript disappearing
-              const currentTranscriptSnapshot = persistentTranscriptRef.current.length > 0 ? 
-                [...persistentTranscriptRef.current] : 
-                (persistentTranscriptRef.current.length > 0 ? [...persistentTranscriptRef.current] : currentTranscript);
-                
-              console.log(`📊 Using persistent transcript (${currentTranscriptSnapshot.length} messages) for metrics check`);
-              
-              // Try to fetch metrics directly from Firebase first
-              console.log("🔥 Attempting direct Firebase metrics fetch...");
-              const firebaseMetrics = await fetchMetricsFromFirebase(currentOrganizationUsername, testId);
-              
-              if (firebaseMetrics && firebaseMetrics.metrics && firebaseMetrics.metrics.length > 0) {
-                console.log(`✅ Found metrics in Firebase! ${firebaseMetrics.metrics.length} metrics available`);
-                console.log("Individual metric scores:", firebaseMetrics.metrics.map(m => ({ name: m.metric_name, score: m.score })));
-                console.log("Firebase overall score:", firebaseMetrics.overallScore);
-                
-                // Use the current transcript snapshot
-                const bestTranscript = currentTranscriptSnapshot;
-                
-                // Store the eval_metadata in the transcript if it exists
-                if (firebaseMetrics.evalMetadata) {
-                  // Make sure we have at least one transcript entry
-                  const baseTranscript = bestTranscript.length > 0 ? bestTranscript : [{
-                    speaker: 'system',
-                    text: 'Call completed',
-                    timestamp: new Date()
-                  }];
-                  
-                  const updatedTranscript = [...baseTranscript];
-                  updatedTranscript[0] = {
-                    ...updatedTranscript[0],
-                    eval_metadata: firebaseMetrics.evalMetadata
-                  };
-                  
-                  setTranscript(updatedTranscript);
-                  persistentTranscriptRef.current = updatedTranscript;
-                } else {
-                  // If no metadata, just make sure we're using the best transcript
-                  setTranscript(bestTranscript);
-                  persistentTranscriptRef.current = bestTranscript;
-                }
-                
-                // Update state with metrics from Firebase
-                setMetricsResults(firebaseMetrics.metrics);
-                setOverallScore(normalizeScore(firebaseMetrics.overallScore));
-                setSimulationStatus(STATUSES.COMPLETED);
-                setSavedSimulationId(null);
-                
-                // Finalize conversation in Firebase with metrics and score
-                try {
-                  // First ensure the complete transcript is saved
-                  await firebaseTranscriptService.ensureTranscriptSaved(bestTranscript);
-                  console.log("✅ Ensured complete transcript is saved to Firebase");
-                  
-                  // Then finalize with metrics and score
-                  await firebaseTranscriptService.finalizeConversation(
-                    firebaseMetrics.metrics,
-                    normalizeScore(firebaseMetrics.overallScore),
-                    {
-                      message_count: bestTranscript.length,
-                      eval_metadata: firebaseMetrics.evalMetadata,
-                      transcript_source: 'direct_firebase_fetch'
-                    }
-                  );
-                  console.log("✅ Conversation finalized in Firebase with metrics and complete transcript");
-                } catch (firebaseError) {
-                  console.error("❌ Failed to finalize conversation in Firebase:", firebaseError);
-                }
-                
-                return true; // Success
-              }
-              
-              // If Firebase doesn't have metrics yet, fall back to API polling
-              console.log("⚠️ No metrics in Firebase yet, trying API polling...");
-              const finalResult = await voiceAgentAPI.getTranscript(
-                currentOrganizationUsername,
-                testId,
-                callSid
-              );
-              
-              // Ensure we keep the transcript if the API response doesn't include it
-              // or if it somehow returns empty
-              if (!finalResult.transcript || finalResult.transcript.length === 0) {
-                console.log(`Transcript missing or empty in final result (attempt ${4-attemptsLeft}), preserving current transcript (${currentTranscriptSnapshot.length} messages)`);
-                finalResult.transcript = currentTranscriptSnapshot;
-              } else if (finalResult.transcript.length < currentTranscriptSnapshot.length) {
-                console.log(`New transcript has fewer messages (${finalResult.transcript.length}) than current (${currentTranscriptSnapshot.length}), keeping current transcript`);
-                finalResult.transcript = currentTranscriptSnapshot;
-              } else {
-                // We have a new transcript that's at least as good as the current one
-                console.log(`Updating transcript with new transcript (${finalResult.transcript.length} messages)`);
-                setTranscript(finalResult.transcript);
-                persistentTranscriptRef.current = finalResult.transcript;
-              }
-              
-              if (finalResult.metrics_results && Object.keys(finalResult.metrics_results).length > 0) {
-                // Format metrics for display
-                const formattedMetrics = formatMetricsForDisplay(finalResult, testMetrics);
-                
-                console.log(`✅ Final metrics results received from API on attempt ${4-attemptsLeft}:`, formattedMetrics);
-                console.log("Individual metric scores:", formattedMetrics.map(m => ({ name: m.metric_name, score: m.score })));
-                console.log("Final overall score:", finalResult.overall_score);
-                
-                // Always use the most complete transcript
-                const bestTranscript = (finalResult.transcript && finalResult.transcript.length > currentTranscriptSnapshot.length) ?
-                  finalResult.transcript : currentTranscriptSnapshot;
-                
-                // Store the eval_metadata in the transcript if it exists
-                if (finalResult.eval_metadata) {
-                  // Make sure we have at least one transcript entry
-                  const baseTranscript = bestTranscript.length > 0 ? bestTranscript : [{
-                    speaker: 'system',
-                    text: 'Call completed',
-                    timestamp: new Date()
-                  }];
-                  
-                  const updatedTranscript = [...baseTranscript];
-                  updatedTranscript[0] = {
-                    ...updatedTranscript[0],
-                    eval_metadata: finalResult.eval_metadata
-                  };
-                  
-                  setTranscript(updatedTranscript);
-                  persistentTranscriptRef.current = updatedTranscript;
-                } else {
-                  // If no metadata, just make sure we're using the best transcript
-                  setTranscript(bestTranscript);
-                  persistentTranscriptRef.current = bestTranscript;
-                }
-                
-                // Update state with metrics
-                setMetricsResults(formattedMetrics);
-                setOverallScore(normalizeScore(finalResult.overall_score));
-                setSimulationStatus(STATUSES.COMPLETED);
-                setSavedSimulationId(null);
-                
-                // Finalize conversation in Firebase with metrics and score
-                try {
-                  // First ensure the complete transcript is saved
-                  await firebaseTranscriptService.ensureTranscriptSaved(bestTranscript);
-                  console.log("✅ Ensured complete transcript is saved to Firebase");
-                  
-                  // Then finalize with metrics and score
-                  await firebaseTranscriptService.finalizeConversation(
-                    formattedMetrics,
-                    normalizeScore(finalResult.overall_score),
-                    {
-                      message_count: bestTranscript.length,
-                      eval_metadata: finalResult.eval_metadata,
-                      transcript_source: 'phoneline_analytics_with_metrics'
-                    }
-                  );
-                  console.log("✅ Conversation finalized in Firebase with metrics and complete transcript");
-                } catch (firebaseError) {
-                  console.error("❌ Failed to finalize conversation in Firebase:", firebaseError);
-                }
-                
-                return true; // Success
-              } else {
-                console.log(`⚠️ No metrics results available yet from API (attempt ${4-attemptsLeft})`);
-                
-                // Always make sure we're displaying something
-                if (currentTranscriptSnapshot.length > 0) {
-                  setTranscript(currentTranscriptSnapshot);
-                }
-                
-                // If we have attempts left, retry with exponential backoff
-                if (attemptsLeft > 1) {
-                  // Wait longer each time
-                  const nextDelay = delay * 1.5;
-                  setTimeout(() => {
-                    checkForFinalMetrics(attemptsLeft - 1, nextDelay);
-                  }, delay);
-                  return false; // Still waiting
-                } else {
-                  console.log("❌ All retry attempts exhausted. No metrics available.");
-                  
-                  // Final attempt to ensure we show something
-                  if (persistentTranscriptRef.current.length > 0) {
-                    console.log(`Using persistent transcript (${persistentTranscriptRef.current.length} messages) as final fallback`);
-                    setTranscript(persistentTranscriptRef.current);
-                  }
-                  
-                  setSimulationStatus(STATUSES.COMPLETED);
-                  setSavedSimulationId(null);
-                  return false; // Failed
-                }
-              }
-            } catch (err) {
-              console.error(`Error getting final metrics (attempt ${4-attemptsLeft}):`, err);
-              
-              // Ensure transcript doesn't disappear on error - use our persistent ref
-              if (persistentTranscriptRef.current.length > 0) {
-                console.log(`⚠️ Preserving transcript during error handling (${persistentTranscriptRef.current.length} messages)`);
-                setTranscript(persistentTranscriptRef.current);
-              } else if (currentTranscript.length > 0) {
-                console.log(`⚠️ Falling back to original transcript during error (${currentTranscript.length} messages)`);
-                setTranscript(currentTranscript);
-                persistentTranscriptRef.current = currentTranscript;
-              }
-              
-              // If we have attempts left, retry with exponential backoff
-              if (attemptsLeft > 1) {
-                // Wait longer each time
-                const nextDelay = delay * 1.5;
-                setTimeout(() => {
-                  checkForFinalMetrics(attemptsLeft - 1, nextDelay);
-                }, delay);
-                return false; // Still waiting
-              } else {
-                console.log("❌ All retry attempts exhausted due to errors.");
-                setSimulationStatus(STATUSES.COMPLETED);
-                setSavedSimulationId(null);
-                return false; // Failed
-              }
-            }
-          };
-          
-          // Start checking for metrics with the initial delay
-          // First check after 8 seconds to give LLM time to evaluate
-          setTimeout(() => {
-            checkForFinalMetrics(3, 8000);
-          }, 8000);
-          
-          return; // Stop polling when call is completed
-        }
-        
-        // Update task status based on progress (this remains similar to original approach)
-        // Use a simplified version based on message count
-        const messageCount = transcriptResult.message_count || 0;
-        if (messageCount > 5 && setTasksInFlow) {
-          setTasksInFlow(prev => {
-            if (prev.length > 1) {
-              const updated = [...prev];
-              if (updated[0]) updated[0].status = STATUSES.COMPLETED;
-              if (updated[1]) updated[1].status = STATUSES.RUNNING;
-              return updated;
-            }
-            return prev;
-          });
-        } else if (messageCount > 10 && setTasksInFlow) {
-          setTasksInFlow(prev => {
-            if (prev.length > 2) {
-              const updated = [...prev];
-              if (updated[1]) updated[1].status = STATUSES.COMPLETED;
-              if (updated[2]) updated[2].status = STATUSES.RUNNING;
-              return updated;
-            }
-            return prev;
-          });
-        }
-      }
-      
-      // Continue polling while call is in progress
-      setTimeout(pollTranscript, 1000);
-    } catch (pollError) {
-      console.error('Error polling transcript:', pollError);
-      
-      // On polling error, make sure we preserve transcript
-      if (persistentTranscriptRef.current.length > 0) {
-        console.log(`⚠️ Preserved transcript during polling error (${persistentTranscriptRef.current.length} messages)`);
-      }
-      
-      setTimeout(pollTranscript, 2000); // Longer delay on error
-    }
-  };
-  
-  // Start polling
-  pollTranscript();
 } 

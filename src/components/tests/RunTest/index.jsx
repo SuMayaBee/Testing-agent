@@ -26,7 +26,7 @@ import {
   cleanTestMetrics,
   cancelTest 
 } from './api';
-import { setupTranscriptPolling, formatMetricsForDisplay } from './utils';
+import { setupRealTimeTranscript, formatMetricsForDisplay } from './utils';
 import { normalizeScore } from './constants';
 // import { realtimeMonitor } from './realtimeMonitor';
 import { firebaseTranscriptService } from './firebaseTranscriptService';
@@ -304,20 +304,20 @@ function RunTest() {
         setTranscript(initialTranscript);
         persistentTranscriptRef.current = initialTranscript;
         
-        // Set up polling
-        setupTranscriptPolling({
-          currentOrganizationUsername,
+        // Set up real-time transcript streaming (replaces old polling)
+        console.log("📡 Setting up real-time transcript streaming...");
+        const cleanup = setupRealTimeTranscript({
           testId,
-          callSid: result.call_sid,
           setTranscript,
-          persistentTranscriptRef,
           setTasksInFlow,
           setMetricsResults,
           setOverallScore,
-          setSimulationStatus,
-          setSavedSimulationId,
-          testMetrics
+          setSimulationStatus
         });
+        
+        // Store cleanup function for later use
+        window.transcriptCleanup = cleanup;
+        
       } catch (err) {
         console.error('Error running test:', err);
         setError(err.message || 'Failed to run test');
@@ -782,9 +782,12 @@ function RunTest() {
           
           <TaskList tasksInFlow={tasksInFlow} />
           
-          {transcript.length > 0 && (
-            <TranscriptViewer transcript={transcript} />
-          )}
+          {/* Always show TranscriptViewer when test is running or completed for real-time streaming */}
+          <TranscriptViewer 
+            testId={testId}
+            organizationId={currentOrganizationUsername}
+            transcript={transcript} 
+          />
           
           {simulationStatus === STATUSES.RUNNING && (
             <RunningActionButtons 

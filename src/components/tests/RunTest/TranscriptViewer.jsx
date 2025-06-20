@@ -1,173 +1,249 @@
-import React, { useRef, useEffect } from 'react';
-import { 
-  DocumentTextIcon, 
-  ChatBubbleLeftRightIcon,
-  PhoneIcon,
-  ComputerDesktopIcon
-} from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useRef } from 'react';
+import { useTranscriptStream } from './utils';
 
-function TranscriptViewer({ transcript }) {
-  const transcriptContainerRef = useRef(null);
-  const prevTranscriptLengthRef = useRef(0);
-  const prevLastSpeakerRef = useRef(null);
+const TranscriptViewer = ({ testId, organizationId, transcript = [] }) => {
+  const {
+    messages: realtimeMessages,
+    connectionStatus,
+    callStatus,
+    isConnected,
+    audioChunks,
+    isAudioEnabled,
+    enableAudio,
+    disableAudio
+  } = useTranscriptStream(testId, organizationId);
   
-  // Format timestamp for display
+  const messagesEndRef = useRef(null);
+  const [displayMessages, setDisplayMessages] = useState([]);
+
+  // Scroll to bottom when new messages arrive
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [displayMessages]);
+
+  // Combine real-time messages with fallback transcript
+  useEffect(() => {
+    if (realtimeMessages && realtimeMessages.length > 0) {
+      // Use real-time messages when available
+      setDisplayMessages(realtimeMessages);
+    } else if (transcript && transcript.length > 0) {
+      // Fallback to prop transcript
+      setDisplayMessages(transcript);
+    } else {
+      setDisplayMessages([]);
+    }
+  }, [realtimeMessages, transcript]);
+
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return '';
     
     try {
-      let date;
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return '';
       
-      // Handle different timestamp formats
-      if (typeof timestamp === 'string') {
-        // Try parsing as ISO string first
-        date = new Date(timestamp);
-        if (isNaN(date.getTime())) {
-          // If that fails, try parsing as a number
-          const numTimestamp = parseFloat(timestamp);
-          if (!isNaN(numTimestamp)) {
-            date = new Date(numTimestamp);
-          }
-        }
-      } else if (typeof timestamp === 'number') {
-        date = new Date(timestamp);
-      } else if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
-        // Firestore timestamp format
-        date = new Date(timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000);
-      } else {
-        return '';
-      }
-      
-      if (isNaN(date.getTime())) {
-        return '';
-      }
-      
-      return date.toLocaleTimeString('en-US', { 
-        hour12: false, 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit' 
+      return date.toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
       });
     } catch (error) {
-      console.error('Error formatting timestamp:', error, timestamp);
       return '';
     }
   };
-  
-  // Process transcript for display (simplified version without response time calculations)
-  const processTranscriptForDisplay = (transcriptData) => {
-    if (!transcriptData || !Array.isArray(transcriptData)) {
-      return [];
-        }
 
-    return transcriptData.map((message, index) => ({
-      ...message,
-      index
-    }));
+  const getMessageTypeStyle = (type) => {
+    switch (type) {
+      case 'user_speech':
+        return 'bg-blue-50 border-blue-200 text-blue-800';
+      case 'assistant_response':
+        return 'bg-green-50 border-green-200 text-green-800';
+      case 'call_started':
+        return 'bg-purple-50 border-purple-200 text-purple-800';
+      case 'call_ended':
+        return 'bg-gray-50 border-gray-200 text-gray-800';
+      default:
+        return 'bg-gray-50 border-gray-200 text-gray-800';
+    }
   };
-  
-  const processedTranscript = processTranscriptForDisplay(transcript);
 
-  // Auto-scroll functionality
-  useEffect(() => {
-    const currentTranscriptLength = transcript.length;
-    const lastMessage = transcript[transcript.length - 1];
-    const currentLastSpeaker = lastMessage?.speaker;
-    
-    // Determine if we should scroll
-    let shouldScroll = false;
-    
-    if (currentTranscriptLength > prevTranscriptLengthRef.current) {
-      // New messages added
-      shouldScroll = true;
-    } else if (currentTranscriptLength === prevTranscriptLengthRef.current && 
-               currentLastSpeaker !== prevLastSpeakerRef.current) {
-      // Same number of messages but last speaker changed (message updated)
-          shouldScroll = true;
+  const getConnectionStatusColor = () => {
+    switch (connectionStatus) {
+      case 'connected':
+        return 'text-green-600';
+      case 'connecting':
+        return 'text-yellow-600';
+      case 'disconnected':
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
     }
-    
-    // Perform the scroll if needed
-    if (shouldScroll) {
-      const container = transcriptContainerRef.current;
-      // Smooth scroll to the bottom
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth'
-      });
+  };
+
+  const getCallStatusColor = () => {
+    switch (callStatus) {
+      case 'started':
+        return 'text-green-600';
+      case 'ended':
+        return 'text-gray-600';
+      case 'idle':
+      default:
+        return 'text-blue-600';
     }
-    
-    // Update the refs for next comparison
-    prevTranscriptLengthRef.current = currentTranscriptLength;
-    if (transcript.length > 0) {
-      prevLastSpeakerRef.current = transcript[transcript.length - 1].speaker;
-    }
-  }, [transcript]);
-  
+  };
+
   return (
-    <div className="mb-6">
-      <h3 className="font-medium flex items-center mb-4">
-        <DocumentTextIcon className="w-5 h-5 mr-2" />
-        Live Conversation
-      </h3>
-
-      {/* Chat Interface */}
-      <div 
-        ref={transcriptContainerRef}
-        className="bg-gray-50 rounded-xl border border-gray-200 shadow-inner max-h-96 overflow-y-auto"
-      >
-        {processedTranscript.length > 0 ? (
-          <div className="p-4 space-y-4">
-            {processedTranscript.map((message, index) => (
-              <div key={index} className="space-y-2">
-                {/* Chat Message */}
-                <div className={`flex ${message.speaker === 'agent' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
-                    message.speaker === 'agent' 
-                      ? 'bg-blue-500 text-white rounded-br-md' 
-                      : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md'
-                  }`}>
-                    {/* Speaker info */}
-                    <div className={`text-xs font-medium mb-1 ${
-                      message.speaker === 'agent' ? 'text-blue-100' : 'text-gray-500'
-                    }`}>
-                      <div className="flex items-center">
-                        {message.speaker === 'user' ? (
-                          <PhoneIcon className="h-3 w-3 mr-1" />
-                        ) : (
-                          <ComputerDesktopIcon className="h-3 w-3 mr-1" />
-                        )}
-                        {message.speaker === 'user' ? 'Restaurant AI' : 'Testing Agent' }
-                        {/* Display start_time if available, otherwise timestamp */}
-                        <span className="ml-2 opacity-75">
-                          {message.start_time ? formatTimestamp(message.start_time) : formatTimestamp(message.timestamp)}
-                        </span>
-                        {/* Show timing source indicator */}
-                        <span className="ml-1 text-xs opacity-50">
-                          {message.start_time ? '(start)' : '(end)'}
-                        </span>
-                        {/* Debug info */}
-                        <span className="ml-2 text-xs opacity-50">
-                          (s:{message.speaker}, a:{message.agent})
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Message text */}
-                    <p className="text-sm leading-relaxed">{message.text}</p>
-                  </div>
+    <div className="bg-white rounded-lg border border-secondary-200 shadow-card p-6 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-medium">Real-time Transcript</h3>
+        
+        <div className="flex items-center space-x-4">
+          {/* Audio Controls */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={isAudioEnabled ? disableAudio : enableAudio}
+              className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                isAudioEnabled 
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              title={isAudioEnabled ? 'Disable real-time audio' : 'Enable real-time audio (requires user interaction)'}
+            >
+              <span className="text-lg">
+                {isAudioEnabled ? '🔊' : '🔇'}
+              </span>
+              <span>
+                {isAudioEnabled ? 'Audio On' : 'Audio Off'}
+              </span>
+            </button>
+            
+            {/* Audio Activity Indicator */}
+            {isAudioEnabled && audioChunks.length > 0 && (
+              <div className="flex items-center space-x-1">
+                <div className="flex space-x-1">
+                  {[...Array(3)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-1 h-4 bg-green-400 rounded-full animate-pulse`}
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    ></div>
+                  ))}
                 </div>
+                <span className="text-xs text-green-600 font-medium">
+                  Live Audio ({audioChunks.filter(chunk => chunk.speaker === 'user').length} user, {audioChunks.filter(chunk => chunk.speaker === 'assistant').length} assistant)
+                </span>
               </div>
-            ))}
+            )}
+            
+            {audioChunks.length > 0 && !isAudioEnabled && (
+              <span className="text-xs text-orange-600 font-medium">
+                {audioChunks.length} chunks available - Click Audio On to listen
+              </span>
+            )}
+            
+            {!isConnected && (
+              <span className="text-xs text-red-600">
+                Audio requires live connection
+              </span>
+            )}
+          </div>
+          
+          {/* Connection Status */}
+          <div className="flex items-center space-x-4 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className={getConnectionStatusColor()}>
+                {connectionStatus === 'connected' && 'Live'}
+                {connectionStatus === 'connecting' && 'Connecting...'}
+                {connectionStatus === 'disconnected' && 'Disconnected'}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-500">Call:</span>
+              <span className={getCallStatusColor()}>
+                {callStatus === 'started' && 'Active'}
+                {callStatus === 'ended' && 'Ended'}
+                {callStatus === 'idle' && 'Idle'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages Container */}
+      <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 max-h-96 overflow-y-auto">
+        {displayMessages.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <div className="text-4xl mb-2">💬</div>
+            <p>Waiting for conversation to start...</p>
+            {isConnected && (
+              <p className="text-sm mt-2">Real-time connection established</p>
+            )}
           </div>
         ) : (
-          <div className="p-8 text-center">
-            <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 italic">Conversation will appear here as the test runs...</p>
+          <div className="space-y-3">
+            {displayMessages.map((message, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-lg border ${getMessageTypeStyle(message.type)}`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium">
+                      {message.type === 'user_speech' && '👤 User'}
+                      {message.type === 'assistant_response' && '🤖 Assistant'}
+                      {message.type === 'call_started' && '📞 System'}
+                      {message.type === 'call_ended' && '📞 System'}
+                      {!message.type && (message.speaker === 'user' ? '👤 User' : message.speaker === 'agent' ? '🤖 Assistant' : '📞 System')}
+                    </span>
+                    {message.type === 'user_speech' && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        Speech
+                      </span>
+                    )}
+                    {message.type === 'assistant_response' && (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                        Response
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {formatTimestamp(message.timestamp)}
+                  </span>
+                </div>
+                <p className="text-gray-800 leading-relaxed">
+                  {message.text || message.message || 'No content'}
+                </p>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
           </div>
         )}
       </div>
+
+      {/* Connection Info */}
+      {connectionStatus === 'disconnected' && displayMessages.length === 0 && (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800 text-sm">
+            ⚠️ Real-time connection not available. Showing fallback transcript data.
+          </p>
+        </div>
+      )}
+
+      {/* Message Count */}
+      {displayMessages.length > 0 && (
+        <div className="mt-4 text-sm text-gray-500 text-center">
+          {displayMessages.length} message{displayMessages.length !== 1 ? 's' : ''}
+          {isConnected && ' • Live updates enabled'}
+        </div>
+      )}
     </div>
   );
-}
+};
 
 export default TranscriptViewer; 

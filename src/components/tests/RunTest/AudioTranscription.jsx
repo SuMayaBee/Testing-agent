@@ -23,6 +23,14 @@ function AudioTranscription({ testId, organizationId, callSid }) {
   const [realTimeTranscript, setRealTimeTranscript] = useState(null);
 
   useEffect(() => {
+    if (testId && organizationId) {
+      // COMMENTED OUT: Using real-time WebSocket streaming instead
+      // fetchTranscription();
+      console.log('📡 AudioTranscription: Real-time transcript now handled by WebSocket streaming');
+    }
+  }, [testId, organizationId]);
+
+  useEffect(() => {
     async function fetchTranscription() {
       if (!testId || !organizationId) return;
 
@@ -142,82 +150,30 @@ function AudioTranscription({ testId, organizationId, callSid }) {
     async function fetchRealTimeTranscript() {
       try {
         console.log('🕒🕒🕒 ===== REAL-TIME TRANSCRIPT (NOT GOOGLE CLOUD SPEECH) ===== 🕒🕒🕒');
-        console.log('🕒 FRONTEND: Fetching real-time transcript...');
-        const transcriptResult = await voiceAgentAPI.getTranscript(organizationId, testId);
-        console.log('🕒 FRONTEND: Real-time transcript result:', transcriptResult);
+        console.log('🕒 FRONTEND: Real-time transcript now handled by WebSocket streaming...');
         
-        // LOG COMPLETE JSON STRUCTURE
-        console.log('🕒 FRONTEND: ===== COMPLETE REAL-TIME TRANSCRIPT JSON STRUCTURE =====');
-        console.log('🕒 FRONTEND: Full result object:', JSON.stringify(transcriptResult, null, 2));
-        console.log('🕒 FRONTEND: Object keys:', Object.keys(transcriptResult || {}));
-        console.log('🕒 FRONTEND: Has transcript property:', !!transcriptResult?.transcript);
-        console.log('🕒 FRONTEND: Has messages property:', !!transcriptResult?.messages);
-        console.log('🕒 FRONTEND: Transcript type:', typeof transcriptResult?.transcript);
-        console.log('🕒 FRONTEND: Transcript is array:', Array.isArray(transcriptResult?.transcript));
-        console.log('🕒 FRONTEND: Transcript length:', transcriptResult?.transcript?.length || 0);
-        console.log('🕒 FRONTEND: Message count property:', transcriptResult?.message_count);
-        console.log('🕒 FRONTEND: Call status:', transcriptResult?.call_status);
-        console.log('🕒 FRONTEND: Call info:', transcriptResult?.call_info);
-        console.log('🕒 FRONTEND: ===================================================');
+        // COMMENTED OUT: This API call is replaced by real-time WebSocket streaming
+        // const transcriptResult = await voiceAgentAPI.getTranscript(organizationId, testId);
         
-        if (transcriptResult && transcriptResult.transcript) {
-          const transcript = transcriptResult.transcript;
-          console.log('🕒 FRONTEND: Processing transcript messages:', transcript.length);
-          
-          // LOG EACH MESSAGE STRUCTURE
-          console.log('🕒 FRONTEND: ===== INDIVIDUAL MESSAGE STRUCTURES =====');
-          transcript.forEach((message, index) => {
-            console.log(`🕒 FRONTEND: Message ${index}:`, JSON.stringify(message, null, 2));
-            console.log(`🕒 FRONTEND: Message ${index} keys:`, Object.keys(message || {}));
-            console.log(`🕒 FRONTEND: Message ${index} has timestamp:`, !!message?.timestamp);
-            console.log(`🕒 FRONTEND: Message ${index} has speaker:`, !!message?.speaker);
-            console.log(`🕒 FRONTEND: Message ${index} has agent:`, !!message?.agent);
-            console.log(`🕒 FRONTEND: Message ${index} has text:`, !!message?.text);
-            console.log(`🕒 FRONTEND: Message ${index} has message:`, !!message?.message);
-            console.log(`🕒 FRONTEND: Message ${index} timestamp type:`, typeof message?.timestamp);
-            if (index < 5) { // Only log first 5 messages in detail
-              console.log(`🕒 FRONTEND: Message ${index} full structure check:`, {
-                timestamp: message?.timestamp,
-                speaker: message?.speaker,
-                agent: message?.agent,
-                text: message?.text,
-                message: message?.message,
-                session_id: message?.session_id,
-                start_time: message?.start_time,
-                end_time: message?.end_time,
-                duration_seconds: message?.duration_seconds
-              });
-            }
-            console.log('🕒 FRONTEND: ----------------------------------------');
-          });
-          console.log('🕒 FRONTEND: ===============================================');
-          
-          // Calculate response delays between messages
-          const messagesWithDelays = calculateRealTimeResponseDelays(transcript);
-          console.log('🕒 FRONTEND: Messages with delays:', messagesWithDelays);
-          
-          setRealTimeTranscript({
-            messages: messagesWithDelays,
-            totalMessages: transcript.length,
-            callDuration: transcriptResult.call_info?.duration || 0,
-            callStatus: transcriptResult.call_info?.status || 'unknown',
-            fullTranscriptResult: transcriptResult // Store the full result for debugging
-          });
-        } else {
-          console.log('🕒 FRONTEND: No transcript data found in result');
-          console.log('🕒 FRONTEND: Available properties in result:', Object.keys(transcriptResult || {}));
-        }
-      } catch (err) {
-        console.error('🕒 FRONTEND: Error fetching real-time transcript:', err);
-        console.error('🕒 FRONTEND: Error details:', {
-          message: err.message,
-          stack: err.stack,
-          name: err.name
+        console.log('🕒 FRONTEND: Real-time transcript is now streamed via WebSocket in TranscriptViewer component');
+        console.log('🕒 FRONTEND: No longer polling the old API endpoint to avoid errors');
+        
+        // Set empty state since real-time data comes through WebSocket
+        setRealTimeTranscript({
+          messages: [],
+          totalMessages: 0,
+          callDuration: 0,
+          callStatus: 'real-time-streaming',
+          note: 'Real-time transcript is now handled by WebSocket streaming in TranscriptViewer component'
         });
+        
+      } catch (err) {
+        console.error('🕒 FRONTEND: Error in fetchRealTimeTranscript (legacy):', err);
       }
     }
 
-    fetchTranscription();
+    // COMMENTED OUT: fetchTranscription() - now using real-time WebSocket streaming
+    console.log('📡 AudioTranscription: Using real-time WebSocket streaming instead of polling');
   }, [testId, organizationId]);
 
   // Calculate response times between speakers
