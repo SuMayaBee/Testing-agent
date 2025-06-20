@@ -39,15 +39,15 @@ export const voiceAgentAPI = {
   },
 
   // Get transcript for a test
-  getTranscript: (organizationId, testId, callSid = null) => {
-    // Use the polling endpoint if callSid is provided
-    const endpoint = callSid
-      ? `/voice-agent/poll-transcript/${testId}?organization_id=${organizationId}&call_sid=${callSid}`
-      : `/voice-agent/get-transcript/${testId}?organization_id=${organizationId}`;
+  // getTranscript: (organizationId, testId, callSid = null) => {
+  //   // Use the polling endpoint if callSid is provided
+  //   const endpoint = callSid
+  //     ? `/voice-agent/poll-transcript/${testId}?organization_id=${organizationId}&call_sid=${callSid}`
+  //     : `/voice-agent/get-transcript/${testId}?organization_id=${organizationId}`;
 
-    // Always disable caching for transcript polling to ensure fresh data
-    return fetchAPI(endpoint, {}, false);
-  },
+  //   // Always disable caching for transcript polling to ensure fresh data
+  //   return fetchAPI(endpoint, {}, false);
+  // },
 
   // Get call status
   getCallStatus: (organizationId, testId) => {
